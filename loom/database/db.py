@@ -2,8 +2,14 @@ from datetime import UTC, datetime
 from httpx._transports import default
 from sqlalchemy import DateTime, Integer, Column, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from pathlib import Path
 
 Base = declarative_base()
+
+LOOM_HOME = Path.home() / ".loom"
+LOOM_HOME.mkdir(exist_ok=True)
+
+DB_PATH = LOOM_HOME / "loom.db"
 
 
 class MessageModel(Base):
@@ -17,7 +23,7 @@ class MessageModel(Base):
     timestamp = Column(DateTime, default=datetime.now(tz=UTC))
 
 
-engine = create_engine("sqlite:///loom.db")
+engine = create_engine(f"sqlite:///{DB_PATH}")
 
 SessionLocal = sessionmaker(bind=engine)
 
