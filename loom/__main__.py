@@ -20,4 +20,4 @@ messages = [
 
 ui = LoomUI()
 
-run(ui.display_stream(provider.chat_completion(messages)))
+run(ui.consume_stream(provider.chat_completion(messages)))
