@@ -4,6 +4,7 @@ from os import getenv
 from asyncio import run
 
 from loom.models.message import SystemMessage, UserMessage
+from loom.ui.loom_ui import LoomUI
 
 load_dotenv()
 
@@ -17,10 +18,6 @@ messages = [
     ),
 ]
 
+ui = LoomUI()
 
-async def run_query():
-    async for chunk in provider.chat_completion(messages):
-        print(chunk.choices[0].delta.content, end="")
-
-
-run(run_query())
+run(ui.display_stream(provider.chat_completion(messages)))
