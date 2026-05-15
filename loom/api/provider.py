@@ -1,8 +1,12 @@
 from loom.api.base_provider import BaseProvider
 import httpx
 from loom.models.message import Message
+from loom.models.stream import StreamChunk
 
 OPEN_ROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+STOP_CHUNK = "data: [DONE]"
+PROCESSING_CHUNK = ": OPENROUTER PROCESSING"
 
 
 class Provider(BaseProvider):
@@ -21,12 +25,20 @@ class Provider(BaseProvider):
             "messages": [msg.model_dump() for msg in messages],
         }
 
-        total = ""
+        chunks: list[StreamChunk] = []
 
         async with self.client.stream(
             "POST", "/chat/completions", json=body
         ) as response:
-            async for chunk in response.aiter_text():
-                total += chunk
+            async for chunk in response.aiter_lines():
+                if not chunk or chunk == PROCESSING_CHUNK:
+                    continue
+                if chunk == STOP_CHUNK:
+                    break
+
+                data = chunk.removeprefix("data: ")
+                chunks.append(StreamChunk.model_validate_json(json_data=data))
+
+        total = "".join(chunk.choices[0].delta.content for chunk in chunks)
 
         return total
