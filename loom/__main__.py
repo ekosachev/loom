@@ -1,39 +1,43 @@
+import asyncio
+from rich.console import Console
 from loom.api.provider import Provider
 from dotenv import load_dotenv
 from os import getenv
-from asyncio import run
+import typer
 
 from loom.database.chat_storage import ChatStorage
-from loom.models.message import SystemMessage, UserMessage, Message
 from loom.ui.loom_ui import LoomUI
 
+load_dotenv()
 
-async def main():
-    load_dotenv()
-    provider = Provider(getenv("OPEN_ROUTER_KEY"))
-    ui = LoomUI()
+app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
+console = Console()
+provider = Provider(getenv("OPEN_ROUTER_KEY"))
+
+
+@app.command(help="Start a new conversation")
+def init():
     storage = ChatStorage()
     storage.clear_history()
-    storage.add_message(role="system", content="You are a helpful assistant.")
+    console.print("[bold green]New chat initialized. History cleared.[/bold green]")
 
-    while True:
-        user_text = ui.get_user_input()
-        if user_text.lower() == "exit":
-            break
 
-        if user_text.lower() == "clear":
-            storage.clear_history()
-            continue
+@app.command(help="Request a new completion using active conversation")
+def send(message: str):
+    asyncio.run(_async_send(message))
 
-        storage.add_message(role="user", content=user_text, name="Developer")
 
-        full_context = storage.get_history()
+async def _async_send(message: str):
+    storage = ChatStorage()
+    ui = LoomUI()
 
-        stream = provider.chat_completion(full_context)
-        await ui.consume_stream(stream)
+    storage.add_message(role="user", content=message, name="Developer")
+    history = storage.get_history()
 
-        storage.add_message(role="assistant", content=ui._buffer)
+    stream = provider.chat_completion(history)
+    await ui.consume_stream(stream)
+    storage.add_message(role="assistant", content=ui._buffer)
 
 
 if __name__ == "__main__":
-    run(main())
+    app()
