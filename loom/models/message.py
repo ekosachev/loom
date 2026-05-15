@@ -13,7 +13,6 @@ class UserMessage(Message):
 
 class AssistantMessage(Message):
     role: str = "assistant"
-    name: str
 
 
 class SystemMessage(Message):
