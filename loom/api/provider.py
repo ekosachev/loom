@@ -1,4 +1,7 @@
+import os
 from typing import AsyncGenerator
+
+import dotenv
 from loom.api.base_provider import BaseProvider
 import httpx
 from loom.models.message import Message
@@ -11,11 +14,13 @@ PROCESSING_CHUNK = ": OPENROUTER PROCESSING"
 
 
 class Provider(BaseProvider):
+    _api_key: str
     client: httpx.AsyncClient
 
-    def __init__(self, api_key) -> None:
+    def __init__(self, key: str) -> None:
+        self._api_key = key
         self.client = httpx.AsyncClient(
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"Authorization": f"Bearer {self._api_key}"},
             base_url=OPEN_ROUTER_BASE_URL,
         )
 

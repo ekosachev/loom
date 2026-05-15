@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 from rich.console import Console
 from loom.api.provider import Provider
 from dotenv import load_dotenv
@@ -13,9 +14,48 @@ import yaml
 
 CONFIG_PATH = Path.home() / ".loom" / "config.yaml"
 
-app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
 console = Console()
-provider = Provider(getenv("OPEN_ROUTER_KEY"))
+
+
+def _get_api_key() -> str:
+    load_dotenv()
+    key = getenv("OPEN_ROUTER_API_KEY")
+
+    if key is not None:
+        return key
+
+    console.print("[dim]Key not in environment, searching in config file...[/dim]")
+
+    if not CONFIG_PATH.exists():
+        console.print("[bold red]Error:[/bold red] config file does not exist")
+        console.print(
+            "Use [bold cyan]loom config[/bold cyan] to set api key, or define OPEN_ROUTER_API_KEY environment variable"
+        )
+        raise typer.Exit(-1)
+
+    with open(CONFIG_PATH, "r") as f:
+        data = yaml.safe_load(f)
+        key = data.get("api_key")
+        if key is not None:
+            return key
+
+    console.print("[bold red]Error:[/bold red] config file does not contain api key")
+    console.print(
+        "Use [bold cyan]loom config[/bold cyan] to set api key, or define OPEN_ROUTER_API_KEY environment variable"
+    )
+
+    raise typer.Exit(-1)
+
+
+app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
+provider: Optional[Provider] = None
+
+
+def _create_provider():
+    global provider
+
+    key = _get_api_key()
+    provider = Provider(key)
 
 
 @app.command(help="Configure loom-cli")
@@ -44,8 +84,15 @@ def send(message: str):
 
 
 async def _async_send(message: str):
+    global provider
+
     storage = ChatStorage()
     ui = LoomUI()
+
+    if provider is None:
+        _create_provider()
+
+    assert provider is not None
 
     storage.add_message(role="user", content=message, name="Developer")
     history = storage.get_history()
