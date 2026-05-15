@@ -1,3 +1,4 @@
+from typing import AsyncIterator
 from loom.api.base_provider import BaseProvider
 import httpx
 from loom.models.message import Message
@@ -18,14 +19,14 @@ class Provider(BaseProvider):
             base_url=OPEN_ROUTER_BASE_URL,
         )
 
-    async def chat_completion(self, messages: list[Message]) -> str:
+    async def chat_completion(
+        self, messages: list[Message]
+    ) -> AsyncIterator[StreamChunk]:
         body = {
             "model": "deepseek/deepseek-v4-flash:free",
             "stream": True,
             "messages": [msg.model_dump() for msg in messages],
         }
-
-        chunks: list[StreamChunk] = []
 
         async with self.client.stream(
             "POST", "/chat/completions", json=body
@@ -37,8 +38,4 @@ class Provider(BaseProvider):
                     break
 
                 data = chunk.removeprefix("data: ")
-                chunks.append(StreamChunk.model_validate_json(json_data=data))
-
-        total = "".join(chunk.choices[0].delta.content for chunk in chunks)
-
-        return total
+                yield StreamChunk.model_validate_json(json_data=data)

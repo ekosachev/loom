@@ -11,8 +11,16 @@ provider = Provider(getenv("OPEN_ROUTER_KEY"))
 
 messages = [
     SystemMessage(content="You are a helpful assistant"),
-    UserMessage(content="What is the capital of France?", name="Egor"),
+    UserMessage(
+        content="This is a test request. Answer with 2-3 sentences of your choosing",
+        name="Egor",
+    ),
 ]
 
-text = run(provider.chat_completion(messages))
-print(text)
+
+async def run_query():
+    async for chunk in provider.chat_completion(messages):
+        print(chunk.choices[0].delta.content, end="")
+
+
+run(run_query())
