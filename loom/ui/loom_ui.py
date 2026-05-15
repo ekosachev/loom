@@ -5,6 +5,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.status import Status
+from rich.prompt import Prompt
 
 from loom.models.stream import StreamChunk
 
@@ -15,6 +16,9 @@ class LoomUI:
     start_time: float
     response_stream: AsyncGenerator[StreamChunk, None]
     ttft: float
+
+    def get_user_input(self) -> str:
+        return Prompt.ask("\n[bold cyan]You[/bold cyan]")
 
     async def consume_stream(self, stream: AsyncGenerator[StreamChunk, None]):
         self.start_time = time.perf_counter()
