@@ -39,5 +39,5 @@ async def _async_send(message: str):
     storage.add_message(role="assistant", content=ui._buffer)
 
 
-if __name__ == "__main__":
+def main():
     app()
