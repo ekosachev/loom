@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import AsyncGenerator
 from loom.api.base_provider import BaseProvider
 import httpx
 from loom.models.message import Message
@@ -21,7 +21,7 @@ class Provider(BaseProvider):
 
     async def chat_completion(
         self, messages: list[Message]
-    ) -> AsyncIterator[StreamChunk]:
+    ) -> AsyncGenerator[StreamChunk, None]:
         body = {
             "model": "deepseek/deepseek-v4-flash:free",
             "stream": True,
