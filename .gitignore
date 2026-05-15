@@ -1,0 +1,5 @@
+venv/
+.env
+loom.db
+**/__pycache__/
+loom_cli.egg-info/
