@@ -1,5 +1,6 @@
 import asyncio
 from typing import Optional
+import httpx
 from rich.console import Console
 from loom.api.provider import Provider
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ import typer
 from pathlib import Path
 
 from loom.database.chat_storage import ChatStorage
+from loom.database.model_manager import ModelManager
 from loom.ui.log_viewer import LoomLogViewer
 from loom.ui.loom_ui import LoomUI
 import yaml
@@ -16,6 +18,13 @@ import yaml
 CONFIG_PATH = Path.home() / ".loom" / "config.yaml"
 
 console = Console()
+model_manager = ModelManager()
+app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
+
+models_app = typer.Typer(help="Managing available LLMs")
+app.add_typer(models_app, name="models")
+
+provider: Optional[Provider] = None
 
 
 def _get_api_key() -> str:
@@ -46,10 +55,6 @@ def _get_api_key() -> str:
     )
 
     raise typer.Exit(-1)
-
-
-app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
-provider: Optional[Provider] = None
 
 
 def _create_provider():
@@ -154,6 +159,50 @@ def log():
 
     viewer = LoomLogViewer(messages, workspace.name, branch.name)
     viewer.run()
+
+
+@models_app.command(name="list")
+def models_list():
+    models = model_manager.load_models()
+
+    if not models:
+        console.print(
+            "[yellow]No models added.[/yellow] Add a new model using [cyan]loom model add [italic]<id>[/italic][/cyan]"
+        )
+        return
+
+    for model in models:
+        console.print(f"[dim]{model.slug}[/dim]\t{model.name}")
+
+
+@models_app.command(name="add")
+def models_add(
+    model_id: str = typer.Argument(
+        ..., help="OpenRouter model id, e. g. google/gemini-2.0-flash-001"
+    ),
+):
+    provider = _create_provider()
+    models = {m.slug: m for m in model_manager.load_models()}
+
+    if model_id in models:
+        console.print(
+            f"[yellow]Model with id {model_id} is alreay present in config[/yellow]. Configuration will be overwritten"
+        )
+
+    try:
+        with console.status(
+            f"[bold green]Requesting metadata for {model_id}...[/bold green]",
+            spinner="dots",
+        ):
+            model = asyncio.run(provider.get_model_meta(model_id))
+    except httpx.HTTPStatusError as e:
+        console.print(f"[bold red]Error:[/bold red] {e.__repr__()}")
+        return
+
+    models[model_id] = model
+    model_manager.save_models(list(models.values()))
+
+    console.print(f"[green bold]{model.name}[/green bold] added successfully!")
 
 
 async def _async_send(message: str):
