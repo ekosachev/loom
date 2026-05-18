@@ -44,13 +44,19 @@ class BranchStorage:
         branch = self.session.query(StateModel).filter_by(key=f"{ws.name}/HEAD").first()
         if branch is None:
             raise NoCurrentBranch()
-        return self.get_branch(str(branch.value))
+        return self.get_branch(branch.value)
 
     def switch_to_branch(self, branch_name: str):
+        ws = self.workspace_storage.get_current_workspace()
         branch = self.get_branch(branch_name)
 
-        head = self.get_current_branch()
-        head.value = branch.name
+        current_branch = (
+            self.session.query(StateModel).filter_by(key=f"{ws.name}/HEAD").first()
+        )
+        if current_branch is None:
+            raise NoCurrentBranch()
+
+        current_branch.value = branch.name
 
         self.session.commit()
 

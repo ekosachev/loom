@@ -1,11 +1,7 @@
 from typing import Optional
-from loom.database import workspace_storage
 from loom.database.db import (
-    BranchModel,
     MessageModel,
     SessionLocal,
-    StateModel,
-    WorkspaceModel,
 )
 from loom.database.workspace_storage import WorkspaceStorage
 from loom.database.branch_storage import BranchStorage
@@ -29,11 +25,11 @@ class ChatStorage:
         self.session.commit()
 
     def _map_model_to_message(self, message: MessageModel) -> Message:
-        if str(message.role) == "user":
+        if message.role == "user":
             return UserMessage.model_validate(message, from_attributes=True)
-        elif str(message.role) == "assistant":
+        elif message.role == "assistant":
             return AssistantMessage.model_validate(message, from_attributes=True)
-        elif str(message.role) == "system":
+        elif message.role == "system":
             return SystemMessage.model_validate(message, from_attributes=True)
 
         return Message.model_validate(message, from_attributes=True)

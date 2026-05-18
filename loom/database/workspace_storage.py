@@ -60,4 +60,4 @@ class WorkspaceStorage:
         )
         if current_workspace_name is None:
             raise NoCurrentWorkspace()
-        return self.get_workspace(str(current_workspace_name.value))
+        return self.get_workspace(current_workspace_name.value)

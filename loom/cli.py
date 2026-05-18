@@ -91,6 +91,15 @@ def change_workspace(name: str):
     )
 
 
+@app.command(help="Display current workspace and branch")
+def status():
+    storage = ChatStorage()
+    ws = storage.workspace_storage.get_current_workspace()
+    console.print(f"Workspace:\t{ws.name}")
+    branch = storage.branch_storage.get_current_branch()
+    console.print(f"Branch:\t{branch.name}")
+
+
 @app.command(help="Request a new completion using active conversation")
 def send(message: str):
     asyncio.run(_async_send(message))
@@ -105,7 +114,7 @@ def checkout(
 
     if b:
         storage.branch_storage.create_branch(branch_name)
-        console.print(f"Created new branch {branch_name} from {current_branch}")
+        console.print(f"Created new branch {branch_name} from {current_branch.name}")
 
     storage.branch_storage.switch_to_branch(branch_name)
     console.print(f"Switched to branch {branch_name}")
@@ -118,8 +127,8 @@ def branch():
     current = storage.branch_storage.get_current_branch()
 
     for b in branches:
-        prefix = "CUR" if b.name == current else ""
-        style = "green bold" if b.name == current else "white"
+        prefix = "CUR" if str(b.name) == str(current.name) else ""
+        style = "green bold" if str(b.name) == str(current.name) else "white"
         console.print(f"[{style}]{prefix}\t{b.name}[/{style}]")
 
 
