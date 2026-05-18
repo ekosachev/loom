@@ -7,6 +7,7 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    event,
 )
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, sessionmaker
 from pathlib import Path
@@ -55,7 +56,16 @@ class WorkspaceModel(Base):
     name: Mapped[str] = mapped_column(String, primary_key=True)
 
 
-engine = create_engine(f"sqlite:///{DB_PATH}")
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"timeout": 30})
+
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
+
 
 SessionLocal = sessionmaker(bind=engine)
 

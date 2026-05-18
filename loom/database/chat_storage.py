@@ -1,7 +1,11 @@
 from typing import Optional
+
+from sqlalchemy.orm import Session
 from loom.database.db import (
+    BranchModel,
     MessageModel,
     SessionLocal,
+    WorkspaceModel,
 )
 from loom.database.workspace_storage import WorkspaceStorage
 from loom.database.branch_storage import BranchStorage
@@ -12,17 +16,13 @@ from loom.models.message import AssistantMessage, Message, SystemMessage, UserMe
 
 
 class ChatStorage:
-    session = SessionLocal()
     workspace_storage: WorkspaceStorage
     branch_storage: BranchStorage
 
     def __init__(self):
-        self.workspace_storage = WorkspaceStorage()
-        self.branch_storage = BranchStorage(self.workspace_storage)
-
-    def _save_message(self, message: MessageModel):
-        self.session.add(message)
-        self.session.commit()
+        with SessionLocal() as session:
+            self.workspace_storage = WorkspaceStorage(session)
+            self.branch_storage = BranchStorage(self.workspace_storage, session)
 
     def _map_model_to_message(self, message: MessageModel) -> Message:
         if message.role == "user":
@@ -35,38 +35,68 @@ class ChatStorage:
         return Message.model_validate(message, from_attributes=True)
 
     def add_message(self, role: str, content: str, name: Optional[str] = None):
-        branch_name = self.branch_storage.get_current_branch()
-        if branch_name is None:
-            raise NoCurrentBranch()
+        with SessionLocal() as session:
+            branch = self.branch_storage.get_current_branch(session)
 
-        branch = self.branch_storage.get_current_branch()
-        parent_id = branch.current_message_id
+            parent_id = branch.current_message_id
 
-        message = MessageModel(
-            role=role, content=content, name=name, parent_id=parent_id
-        )
-        self._save_message(message)
+            message = MessageModel(
+                role=role, content=content, name=name, parent_id=parent_id
+            )
 
-        branch.current_message_id = message.id
-        self.session.commit()
+            session.add(message)
+            session.commit()
+
+            branch.current_message_id = message.id
+            session.commit()
 
     def get_history(self, limit: int = 20) -> list[Message]:
-        branch = self.branch_storage.get_current_branch()
+        with SessionLocal() as session:
+            branch = self.branch_storage.get_current_branch(session)
 
-        history = []
+            history = []
 
-        current_id = branch.current_message_id
+            current_id = branch.current_message_id
 
-        while current_id is not None and len(history) <= limit:
-            msg = self.session.query(MessageModel).filter_by(id=current_id).first()
-            if msg is None:
-                raise ValueError(f"Message with id {current_id} not found")
+            while current_id is not None and len(history) <= limit:
+                msg = session.query(MessageModel).filter_by(id=current_id).first()
+                if msg is None:
+                    raise ValueError(f"Message with id {current_id} not found")
 
-            history.append(self._map_model_to_message(msg))
-            current_id = msg.parent_id
+                history.append(self._map_model_to_message(msg))
+                current_id = msg.parent_id
 
         return history
 
     def switch_to_workspace(self, name: str):
-        self.workspace_storage.switch_to_workspace(name)
-        self.branch_storage = BranchStorage(self.workspace_storage)
+        with SessionLocal() as session:
+            self.workspace_storage.switch_to_workspace(session, name)
+            self.branch_storage = BranchStorage(self.workspace_storage, session)
+
+    def create_workspace(self, name: str):
+        with SessionLocal() as session:
+            self.workspace_storage.create_workspace(session, name)
+
+    def get_current_workspace(self) -> WorkspaceModel:
+        with SessionLocal() as session:
+            return self.workspace_storage.get_current_workspace(session)
+
+    def get_current_branch(self) -> BranchModel:
+        with SessionLocal() as session:
+            return self.branch_storage.get_current_branch(session)
+
+    def create_branch(self, name: str):
+        with SessionLocal() as session:
+            self.branch_storage.create_branch(session, name)
+
+    def switch_to_branch(self, name: str):
+        with SessionLocal() as session:
+            self.branch_storage.switch_to_branch(session, name)
+
+    def get_all_workspaces(self):
+        with SessionLocal() as session:
+            return self.workspace_storage.get_all_workspaces(session)
+
+    def get_all_branches(self):
+        with SessionLocal() as session:
+            return self.branch_storage.get_all_branches(session)
