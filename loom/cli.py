@@ -1,7 +1,6 @@
 import asyncio
 from typing import Optional
 from rich.console import Console
-from sqlalchemy.orm import session
 from loom.api.provider import Provider
 from dotenv import load_dotenv
 from os import getenv
@@ -72,10 +71,24 @@ def config(key: str = typer.Option(None, "--key", help="OpenRouter API Key")):
     console.print("[bold green]Configuration saved to ~/.loom/config.yaml[/bold green]")
 
 
-@app.command(help="Start a new conversation")
-def init():
+@app.command(help="Create a new workspace")
+def init(name: str):
     storage = ChatStorage()
-    console.print("[bold green]New chat initialized. History cleared.[/bold green]")
+    storage.workspace_storage.create_workspace(name)
+    storage.switch_to_workspace(name)
+    console.print(f"[bold magenta]WORKSPACE[/bold magenta] New workspace: {name}")
+    console.print(
+        f"[bold magenta]WORKSPACE[/bold magenta] Switched to workspace: {name}"
+    )
+
+
+@app.command(name="ws", help="Switch to an existing workspace")
+def change_workspace(name: str):
+    storage = ChatStorage()
+    storage.switch_to_workspace(name)
+    console.print(
+        f"[bold magenta]WORKSPACE[/bold magenta] Switched to workspace: {name}"
+    )
 
 
 @app.command(help="Request a new completion using active conversation")
@@ -88,21 +101,21 @@ def checkout(
     branch_name: str, b: bool = typer.Option(False, "-b", help="Create a new branch")
 ):
     storage = ChatStorage()
-    current_branch = storage.get_current_branch()
+    current_branch = storage.branch_storage.get_current_branch()
 
     if b:
-        storage.create_branch(branch_name)
+        storage.branch_storage.create_branch(branch_name)
         console.print(f"Created new branch {branch_name} from {current_branch}")
 
-    storage.switch_to_branch(branch_name)
+    storage.branch_storage.switch_to_branch(branch_name)
     console.print(f"Switched to branch {branch_name}")
 
 
 @app.command(help="List available branches")
 def branch():
     storage = ChatStorage()
-    branches = storage.get_all_branches()
-    current = storage.get_current_branch()
+    branches = storage.branch_storage.get_all_branches()
+    current = storage.branch_storage.get_current_branch()
 
     for b in branches:
         prefix = "CUR" if b.name == current else ""

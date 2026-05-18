@@ -8,7 +8,7 @@ from sqlalchemy import (
     Text,
     create_engine,
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from pathlib import Path
 
 Base = declarative_base()
@@ -34,7 +34,9 @@ class MessageModel(Base):
 class BranchModel(Base):
     __tablename__ = "branches"
 
-    name = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(String, ForeignKey("workspaces.name"), nullable=False)
+    name = Column(String, nullable=False)
     current_message_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
 
 
@@ -43,6 +45,11 @@ class StateModel(Base):
 
     key = Column(String, primary_key=True)
     value = Column(String, nullable=False)
+
+
+class WorkspaceModel(Base):
+    __tablename__ = "workspaces"
+    name = Column(String, primary_key=True)
 
 
 engine = create_engine(f"sqlite:///{DB_PATH}")
