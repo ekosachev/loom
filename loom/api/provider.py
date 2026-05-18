@@ -1,7 +1,5 @@
-import os
 from typing import AsyncGenerator
 
-import dotenv
 from loom.api.base_provider import BaseProvider
 import httpx
 from loom.models.message import Message
@@ -22,6 +20,7 @@ class Provider(BaseProvider):
         self.client = httpx.AsyncClient(
             headers={"Authorization": f"Bearer {self._api_key}"},
             base_url=OPEN_ROUTER_BASE_URL,
+            timeout=None,
         )
 
     async def chat_completion(
