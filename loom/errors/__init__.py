@@ -28,3 +28,11 @@ class NoCurrentWorkspace(WorkspaceException):
 
 class WorkspaceDoesNotExist(WorkspaceException):
     pass
+
+
+class ConfigurationError(BaseException):
+    pass
+
+
+class NoActiveModel(ConfigurationError):
+    pass

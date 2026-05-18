@@ -108,7 +108,9 @@ def status():
 
 @app.command(help="Request a new completion using active conversation")
 def send(message: str):
-    asyncio.run(_async_send(message))
+    storage = ChatStorage()
+    active_model = storage.get_active_model()
+    asyncio.run(_async_send(message, active_model))
 
 
 @app.command(help="Create or switch to another branch")
@@ -205,7 +207,25 @@ def models_add(
     console.print(f"[green bold]{model.name}[/green bold] added successfully!")
 
 
-async def _async_send(message: str):
+@models_app.command(name="set")
+def models_set_active(
+    model_id: str = typer.Argument(
+        ..., help="OpenRouter model id, e. g. google/gemini-2.0-flash-001"
+    ),
+):
+    storage = ChatStorage()
+    models = {m.slug: m for m in model_manager.load_models()}
+
+    if model_id not in models:
+        console.print(
+            f"[yellow]Model not found.[/yellow] Add a new model using [cyan]loom model add [italic]{model_id}[/italic][/cyan]"
+        )
+        return
+
+    storage.set_active_model(model_id)
+
+
+async def _async_send(message: str, model_id: str):
     storage = ChatStorage()
     ui = LoomUI()
 
@@ -214,7 +234,7 @@ async def _async_send(message: str):
     storage.add_message(role="user", content=message, name="Developer")
     history = storage.get_history()
 
-    stream = provider.chat_completion(history)
+    stream = provider.chat_completion(history, model_id)
     await ui.consume_stream(stream)
     storage.add_message(
         role="assistant", content=ui._buffer, reasoning=ui._reasoning_buffer

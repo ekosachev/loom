@@ -4,11 +4,13 @@ from loom.database.db import (
     BranchModel,
     MessageModel,
     SessionLocal,
+    StateModel,
     WorkspaceModel,
 )
 from loom.database.workspace_storage import WorkspaceStorage
 from loom.database.branch_storage import BranchStorage
 from loom.models.message import AssistantMessage, Message, SystemMessage, UserMessage
+from loom.errors import NoActiveModel
 
 
 class ChatStorage:
@@ -106,3 +108,21 @@ class ChatStorage:
     def get_all_branches(self):
         with SessionLocal() as session:
             return self.branch_storage.get_all_branches(session)
+
+    def get_active_model(self) -> str:
+        with SessionLocal() as session:
+            model_slug = session.query(StateModel).filter_by(key="MODEL").first()
+            if model_slug is None:
+                raise NoActiveModel()
+
+        return model_slug.value
+
+    def set_active_model(self, slug: str):
+        with SessionLocal() as session:
+            current_model = session.query(StateModel).filter_by(key="MODEL").first()
+            if current_model is None:
+                current_model = StateModel(key="MODEL", value=slug)
+                session.add(current_model)
+            else:
+                current_model.value = slug
+            session.commit()

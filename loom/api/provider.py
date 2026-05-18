@@ -25,10 +25,10 @@ class Provider(BaseProvider):
         )
 
     async def chat_completion(
-        self, messages: list[Message]
+        self, messages: list[Message], model_id: str
     ) -> AsyncGenerator[StreamChunk, None]:
         body = {
-            "model": "deepseek/deepseek-v4-flash:free",
+            "model": model_id,
             "stream": True,
             "messages": [msg.model_dump() for msg in messages],
         }

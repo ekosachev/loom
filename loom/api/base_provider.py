@@ -8,7 +8,7 @@ from loom.models.stream import StreamChunk
 class BaseProvider(ABC):
     @abstractmethod
     def chat_completion(
-        self, messages: list[Message]
+        self, messages: list[Message], model_id: str
     ) -> AsyncGenerator[StreamChunk, None]:
         pass
 
