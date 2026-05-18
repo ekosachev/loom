@@ -1,6 +1,5 @@
 from typing import Optional
 
-from sqlalchemy.orm import Session
 from loom.database.db import (
     BranchModel,
     MessageModel,
@@ -9,9 +8,6 @@ from loom.database.db import (
 )
 from loom.database.workspace_storage import WorkspaceStorage
 from loom.database.branch_storage import BranchStorage
-from loom.errors import (
-    NoCurrentBranch,
-)
 from loom.models.message import AssistantMessage, Message, SystemMessage, UserMessage
 
 
@@ -34,14 +30,24 @@ class ChatStorage:
 
         return Message.model_validate(message, from_attributes=True)
 
-    def add_message(self, role: str, content: str, name: Optional[str] = None):
+    def add_message(
+        self,
+        role: str,
+        content: str,
+        name: Optional[str] = None,
+        reasoning: Optional[str] = None,
+    ):
         with SessionLocal() as session:
             branch = self.branch_storage.get_current_branch(session)
 
             parent_id = branch.current_message_id
 
             message = MessageModel(
-                role=role, content=content, name=name, parent_id=parent_id
+                role=role,
+                content=content,
+                name=name,
+                parent_id=parent_id,
+                reasoning=reasoning,
             )
 
             session.add(message)

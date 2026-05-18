@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from loom.models.message import Message
+from loom.models.message import AssistantMessage
 
 
 class StreamChunk(BaseModel):
@@ -8,4 +8,4 @@ class StreamChunk(BaseModel):
 
 
 class CompletionChoice(BaseModel):
-    delta: Message
+    delta: AssistantMessage

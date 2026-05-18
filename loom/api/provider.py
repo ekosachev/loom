@@ -36,7 +36,7 @@ class Provider(BaseProvider):
             "POST", "/chat/completions", json=body
         ) as response:
             async for chunk in response.aiter_lines():
-                if not chunk or chunk == PROCESSING_CHUNK:
+                if not chunk or chunk == PROCESSING_CHUNK or chunk.startswith(":"):
                     continue
                 if chunk == STOP_CHUNK:
                     break

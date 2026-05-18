@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class Message(BaseModel):
@@ -13,6 +14,7 @@ class UserMessage(Message):
 
 class AssistantMessage(Message):
     role: str = "assistant"
+    reasoning: Optional[str] = None
 
 
 class SystemMessage(Message):

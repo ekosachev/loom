@@ -27,6 +27,7 @@ class MessageModel(Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    reasoning: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(tz=UTC))
     parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("messages.id"))
 
