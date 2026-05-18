@@ -21,6 +21,23 @@ class MessageModel(Base):
     name = Column(String, nullable=True)
     content = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=datetime.now(tz=UTC))
+    parent_id = Column(Integer, ForeignKey("messages.id"))
+
+    children = relationship("messages")
+
+
+class BranchModel(Base):
+    __tablename__ = "branches"
+
+    name = Column(String, primary_key=True)
+    current_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+
+
+class StateModel(Base):
+    __tablename__ = "state"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
 
 
 engine = create_engine(f"sqlite:///{DB_PATH}")
