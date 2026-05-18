@@ -4,7 +4,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    Column,
     String,
     Text,
     create_engine,

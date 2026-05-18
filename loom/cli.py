@@ -8,6 +8,7 @@ import typer
 from pathlib import Path
 
 from loom.database.chat_storage import ChatStorage
+from loom.ui.log_viewer import LoomLogViewer
 from loom.ui.loom_ui import LoomUI
 import yaml
 
@@ -52,10 +53,10 @@ provider: Optional[Provider] = None
 
 
 def _create_provider():
-    global provider
-
     key = _get_api_key()
     provider = Provider(key)
+
+    return provider
 
 
 @app.command(help="Configure loom-cli")
@@ -142,6 +143,17 @@ def workspace():
         prefix = "CUR" if str(ws.name) == str(current.name) else ""
         style = "green bold" if str(ws.name) == str(current.name) else "white"
         console.print(f"[{style}]{prefix}\t{ws.name}[/{style}]")
+
+
+@app.command(help="Display chat log for current branch")
+def log():
+    storage = ChatStorage()
+    workspace = storage.workspace_storage.get_current_workspace()
+    branch = storage.branch_storage.get_current_branch()
+    messages = storage.get_history()
+
+    viewer = LoomLogViewer(messages, workspace.name, branch.name)
+    viewer.run()
 
 
 async def _async_send(message: str):
