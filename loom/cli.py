@@ -132,16 +132,23 @@ def branch():
         console.print(f"[{style}]{prefix}\t{b.name}[/{style}]")
 
 
-async def _async_send(message: str):
-    global provider
+@app.command(help="List all workspaces")
+def workspace():
+    storage = ChatStorage()
+    workspaces = storage.workspace_storage.get_all_workspaces()
+    current = storage.workspace_storage.get_current_workspace()
 
+    for ws in workspaces:
+        prefix = "CUR" if str(ws.name) == str(current.name) else ""
+        style = "green bold" if str(ws.name) == str(current.name) else "white"
+        console.print(f"[{style}]{prefix}\t{ws.name}[/{style}]")
+
+
+async def _async_send(message: str):
     storage = ChatStorage()
     ui = LoomUI()
 
-    if provider is None:
-        _create_provider()
-
-    assert provider is not None
+    provider = _create_provider()
 
     storage.add_message(role="user", content=message, name="Developer")
     history = storage.get_history()

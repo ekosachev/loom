@@ -61,3 +61,6 @@ class WorkspaceStorage:
         if current_workspace_name is None:
             raise NoCurrentWorkspace()
         return self.get_workspace(current_workspace_name.value)
+
+    def get_all_workspaces(self) -> list[WorkspaceModel]:
+        return self.session.query(WorkspaceModel).all()
