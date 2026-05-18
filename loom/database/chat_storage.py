@@ -66,7 +66,7 @@ class ChatStorage:
                 history.append(self._map_model_to_message(msg))
                 current_id = msg.parent_id
 
-        return history
+        return history[::-1]
 
     def switch_to_workspace(self, name: str):
         with SessionLocal() as session:
