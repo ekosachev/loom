@@ -1,6 +1,7 @@
 import asyncio
 from typing import Optional
 from rich.console import Console
+from sqlalchemy.orm import session
 from loom.api.provider import Provider
 from dotenv import load_dotenv
 from os import getenv
@@ -74,13 +75,36 @@ def config(key: str = typer.Option(None, "--key", help="OpenRouter API Key")):
 @app.command(help="Start a new conversation")
 def init():
     storage = ChatStorage()
-    storage.clear_history()
     console.print("[bold green]New chat initialized. History cleared.[/bold green]")
 
 
 @app.command(help="Request a new completion using active conversation")
 def send(message: str):
     asyncio.run(_async_send(message))
+
+
+@app.command(help="Create or switch to another branch")
+def checkout(
+    branch_name: str, b: bool = typer.Option(False, "-b", help="Create a new branch")
+):
+    storage = ChatStorage()
+
+    if b:
+        storage.create_branch(branch_name)
+
+    storage.switch_to_branch(branch_name)
+
+
+@app.command(help="List available branches")
+def branch():
+    storage = ChatStorage()
+    branches = storage.get_all_branches()
+    current = storage.get_current_branch()
+
+    for b in branches:
+        prefix = "CUR" if b.name == current else ""
+        style = "green bold" if b.name == current else "white"
+        console.print(f"[{style}]{prefix}\t{b.name}[/{style}]")
 
 
 async def _async_send(message: str):

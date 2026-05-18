@@ -1,7 +1,14 @@
 from datetime import UTC, datetime
-from httpx._transports import default
-from sqlalchemy import DateTime, Integer, Column, String, Text, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    Column,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from pathlib import Path
 
 Base = declarative_base()
@@ -23,14 +30,12 @@ class MessageModel(Base):
     timestamp = Column(DateTime, default=datetime.now(tz=UTC))
     parent_id = Column(Integer, ForeignKey("messages.id"))
 
-    children = relationship("messages")
-
 
 class BranchModel(Base):
     __tablename__ = "branches"
 
     name = Column(String, primary_key=True)
-    current_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    current_message_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
 
 
 class StateModel(Base):
