@@ -8,6 +8,7 @@ import typer
 from pathlib import Path
 
 from loom.database.chat_storage import ChatStorage
+from loom.ui.log_viewer import LoomLogViewer
 from loom.ui.loom_ui import LoomUI
 import yaml
 
@@ -52,10 +53,10 @@ provider: Optional[Provider] = None
 
 
 def _create_provider():
-    global provider
-
     key = _get_api_key()
     provider = Provider(key)
+
+    return provider
 
 
 @app.command(help="Configure loom-cli")
@@ -74,7 +75,7 @@ def config(key: str = typer.Option(None, "--key", help="OpenRouter API Key")):
 @app.command(help="Create a new workspace")
 def init(name: str):
     storage = ChatStorage()
-    storage.workspace_storage.create_workspace(name)
+    storage.create_workspace(name)
     storage.switch_to_workspace(name)
     console.print(f"[bold magenta]WORKSPACE[/bold magenta] New workspace: {name}")
     console.print(
@@ -94,9 +95,9 @@ def change_workspace(name: str):
 @app.command(help="Display current workspace and branch")
 def status():
     storage = ChatStorage()
-    ws = storage.workspace_storage.get_current_workspace()
+    ws = storage.get_current_workspace()
     console.print(f"Workspace:\t{ws.name}")
-    branch = storage.branch_storage.get_current_branch()
+    branch = storage.get_current_branch()
     console.print(f"Branch:\t{branch.name}")
 
 
@@ -110,21 +111,21 @@ def checkout(
     branch_name: str, b: bool = typer.Option(False, "-b", help="Create a new branch")
 ):
     storage = ChatStorage()
-    current_branch = storage.branch_storage.get_current_branch()
+    current_branch = storage.get_current_branch()
 
     if b:
-        storage.branch_storage.create_branch(branch_name)
+        storage.create_branch(branch_name)
         console.print(f"Created new branch {branch_name} from {current_branch.name}")
 
-    storage.branch_storage.switch_to_branch(branch_name)
+    storage.switch_to_branch(branch_name)
     console.print(f"Switched to branch {branch_name}")
 
 
 @app.command(help="List available branches")
 def branch():
     storage = ChatStorage()
-    branches = storage.branch_storage.get_all_branches()
-    current = storage.branch_storage.get_current_branch()
+    branches = storage.get_all_branches()
+    current = storage.get_current_branch()
 
     for b in branches:
         prefix = "CUR" if str(b.name) == str(current.name) else ""
@@ -132,16 +133,34 @@ def branch():
         console.print(f"[{style}]{prefix}\t{b.name}[/{style}]")
 
 
-async def _async_send(message: str):
-    global provider
+@app.command(help="List all workspaces")
+def workspace():
+    storage = ChatStorage()
+    workspaces = storage.get_all_workspaces()
+    current = storage.get_current_workspace()
 
+    for ws in workspaces:
+        prefix = "CUR" if str(ws.name) == str(current.name) else ""
+        style = "green bold" if str(ws.name) == str(current.name) else "white"
+        console.print(f"[{style}]{prefix}\t{ws.name}[/{style}]")
+
+
+@app.command(help="Display chat log for current branch")
+def log():
+    storage = ChatStorage()
+    workspace = storage.get_current_workspace()
+    branch = storage.get_current_branch()
+    messages = storage.get_history()
+
+    viewer = LoomLogViewer(messages, workspace.name, branch.name)
+    viewer.run()
+
+
+async def _async_send(message: str):
     storage = ChatStorage()
     ui = LoomUI()
 
-    if provider is None:
-        _create_provider()
-
-    assert provider is not None
+    provider = _create_provider()
 
     storage.add_message(role="user", content=message, name="Developer")
     history = storage.get_history()
