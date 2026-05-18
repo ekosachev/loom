@@ -1,4 +1,4 @@
-from typing import Optional, overload
+from typing import Optional
 from loom.database.db import MessageModel, SessionLocal
 from loom.models.message import AssistantMessage, Message, SystemMessage, UserMessage
 
@@ -9,6 +9,16 @@ class ChatStorage:
     def _save_message(self, message: MessageModel):
         self.session.add(message)
         self.session.commit()
+
+    def _map_model_to_message(self, message: MessageModel) -> Message:
+        if message.role == "user":
+            return UserMessage.model_validate(message, from_attributes=True)
+        elif message.role == "assistant":
+            return AssistantMessage.model_validate(message, from_attributes=True)
+        elif message.role == "system":
+            return SystemMessage.model_validate(message, from_attributes=True)
+
+        return Message.model_validate(message, from_attributes=True)
 
     def add_message(self, role: str, content: str, name: Optional[str] = None):
         message = MessageModel(role=role, content=content, name=name)
@@ -25,12 +35,7 @@ class ChatStorage:
         history = []
 
         for m in messages:
-            if m.role == "user":
-                history.append(UserMessage.model_validate(m, from_attributes=True))
-            elif m.role == "assistant":
-                history.append(AssistantMessage.model_validate(m, from_attributes=True))
-            elif m.role == "system":
-                history.append(SystemMessage.model_validate(m, from_attributes=True))
+            history.append(self._map_model_to_message(m))
 
         return history
 
