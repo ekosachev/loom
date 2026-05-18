@@ -1,18 +1,16 @@
 from typing import Optional
 
-from sqlalchemy.orm import Session
 from loom.database.db import (
     BranchModel,
     MessageModel,
     SessionLocal,
+    StateModel,
     WorkspaceModel,
 )
 from loom.database.workspace_storage import WorkspaceStorage
 from loom.database.branch_storage import BranchStorage
-from loom.errors import (
-    NoCurrentBranch,
-)
 from loom.models.message import AssistantMessage, Message, SystemMessage, UserMessage
+from loom.errors import NoActiveModel
 
 
 class ChatStorage:
@@ -34,14 +32,24 @@ class ChatStorage:
 
         return Message.model_validate(message, from_attributes=True)
 
-    def add_message(self, role: str, content: str, name: Optional[str] = None):
+    def add_message(
+        self,
+        role: str,
+        content: str,
+        name: Optional[str] = None,
+        reasoning: Optional[str] = None,
+    ):
         with SessionLocal() as session:
             branch = self.branch_storage.get_current_branch(session)
 
             parent_id = branch.current_message_id
 
             message = MessageModel(
-                role=role, content=content, name=name, parent_id=parent_id
+                role=role,
+                content=content,
+                name=name,
+                parent_id=parent_id,
+                reasoning=reasoning,
             )
 
             session.add(message)
@@ -100,3 +108,21 @@ class ChatStorage:
     def get_all_branches(self):
         with SessionLocal() as session:
             return self.branch_storage.get_all_branches(session)
+
+    def get_active_model(self) -> str:
+        with SessionLocal() as session:
+            model_slug = session.query(StateModel).filter_by(key="MODEL").first()
+            if model_slug is None:
+                raise NoActiveModel()
+
+        return model_slug.value
+
+    def set_active_model(self, slug: str):
+        with SessionLocal() as session:
+            current_model = session.query(StateModel).filter_by(key="MODEL").first()
+            if current_model is None:
+                current_model = StateModel(key="MODEL", value=slug)
+                session.add(current_model)
+            else:
+                current_model.value = slug
+            session.commit()

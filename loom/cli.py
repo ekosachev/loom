@@ -1,5 +1,6 @@
 import asyncio
 from typing import Optional
+import httpx
 from rich.console import Console
 from loom.api.provider import Provider
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ import typer
 from pathlib import Path
 
 from loom.database.chat_storage import ChatStorage
+from loom.database.model_manager import ModelManager
 from loom.ui.log_viewer import LoomLogViewer
 from loom.ui.loom_ui import LoomUI
 import yaml
@@ -16,6 +18,13 @@ import yaml
 CONFIG_PATH = Path.home() / ".loom" / "config.yaml"
 
 console = Console()
+model_manager = ModelManager()
+app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
+
+models_app = typer.Typer(help="Managing available LLMs")
+app.add_typer(models_app, name="models")
+
+provider: Optional[Provider] = None
 
 
 def _get_api_key() -> str:
@@ -46,10 +55,6 @@ def _get_api_key() -> str:
     )
 
     raise typer.Exit(-1)
-
-
-app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context management")
-provider: Optional[Provider] = None
 
 
 def _create_provider():
@@ -103,7 +108,9 @@ def status():
 
 @app.command(help="Request a new completion using active conversation")
 def send(message: str):
-    asyncio.run(_async_send(message))
+    storage = ChatStorage()
+    active_model = storage.get_active_model()
+    asyncio.run(_async_send(message, active_model))
 
 
 @app.command(help="Create or switch to another branch")
@@ -156,7 +163,69 @@ def log():
     viewer.run()
 
 
-async def _async_send(message: str):
+@models_app.command(name="list")
+def models_list():
+    models = model_manager.load_models()
+
+    if not models:
+        console.print(
+            "[yellow]No models added.[/yellow] Add a new model using [cyan]loom model add [italic]<id>[/italic][/cyan]"
+        )
+        return
+
+    for model in models:
+        console.print(f"[dim]{model.slug}[/dim]\t{model.name}")
+
+
+@models_app.command(name="add")
+def models_add(
+    model_id: str = typer.Argument(
+        ..., help="OpenRouter model id, e. g. google/gemini-2.0-flash-001"
+    ),
+):
+    provider = _create_provider()
+    models = {m.slug: m for m in model_manager.load_models()}
+
+    if model_id in models:
+        console.print(
+            f"[yellow]Model with id {model_id} is alreay present in config[/yellow]. Configuration will be overwritten"
+        )
+
+    try:
+        with console.status(
+            f"[bold green]Requesting metadata for {model_id}...[/bold green]",
+            spinner="dots",
+        ):
+            model = asyncio.run(provider.get_model_meta(model_id))
+    except httpx.HTTPStatusError as e:
+        console.print(f"[bold red]Error:[/bold red] {e.__repr__()}")
+        return
+
+    models[model_id] = model
+    model_manager.save_models(list(models.values()))
+
+    console.print(f"[green bold]{model.name}[/green bold] added successfully!")
+
+
+@models_app.command(name="set")
+def models_set_active(
+    model_id: str = typer.Argument(
+        ..., help="OpenRouter model id, e. g. google/gemini-2.0-flash-001"
+    ),
+):
+    storage = ChatStorage()
+    models = {m.slug: m for m in model_manager.load_models()}
+
+    if model_id not in models:
+        console.print(
+            f"[yellow]Model not found.[/yellow] Add a new model using [cyan]loom model add [italic]{model_id}[/italic][/cyan]"
+        )
+        return
+
+    storage.set_active_model(model_id)
+
+
+async def _async_send(message: str, model_id: str):
     storage = ChatStorage()
     ui = LoomUI()
 
@@ -165,9 +234,11 @@ async def _async_send(message: str):
     storage.add_message(role="user", content=message, name="Developer")
     history = storage.get_history()
 
-    stream = provider.chat_completion(history)
+    stream = provider.chat_completion(history, model_id)
     await ui.consume_stream(stream)
-    storage.add_message(role="assistant", content=ui._buffer)
+    storage.add_message(
+        role="assistant", content=ui._buffer, reasoning=ui._reasoning_buffer
+    )
 
 
 def main():

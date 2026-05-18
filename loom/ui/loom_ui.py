@@ -5,20 +5,19 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.status import Status
-from rich.prompt import Prompt
+from rich.spinner import Spinner
 
 from loom.models.stream import StreamChunk
 
 
 class LoomUI:
     console = Console()
+    _reasoning_buffer = ""
     _buffer = ""
     start_time: float
     response_stream: AsyncGenerator[StreamChunk, None]
     ttft: float
-
-    def get_user_input(self) -> str:
-        return Prompt.ask("\n[bold cyan]You[/bold cyan]")
+    is_reasoning: bool = True
 
     async def consume_stream(self, stream: AsyncGenerator[StreamChunk, None]):
         self.start_time = time.perf_counter()
@@ -34,7 +33,9 @@ class LoomUI:
 
     async def _loading_state(self) -> bool:
         with Status(
-            "[bold green]Thinking...", console=self.console, spinner="dots"
+            "[bold green]Waiting for the model to start responding...",
+            console=self.console,
+            spinner="dots",
         ) as _:
             try:
                 first_chunk = await anext(self.response_stream)
@@ -51,13 +52,19 @@ class LoomUI:
             self._generate_panel(), console=self.console, refresh_per_second=20
         ) as live:
             async for chunk in self.response_stream:
+                self._reasoning_buffer += (
+                    chunk.choices[0].delta.reasoning
+                    if chunk.choices[0].delta.reasoning is not None
+                    else ""
+                )
                 self._buffer += chunk.choices[0].delta.content
                 live.update(self._generate_panel())
 
     def _generate_panel(self) -> Panel:
         return Panel(
-            Markdown(self._buffer),
-            title="[bold blue]OpenRouter response[/bold blue]",
+            Markdown(self._reasoning_buffer + "\n\n---\n\n" + self._buffer),
+            title="[bold]OpenRouter response[/bold]",
+            title_align="left",
             border_style="bright_magenta",
             padding=(1, 2),
         )
