@@ -88,11 +88,14 @@ def checkout(
     branch_name: str, b: bool = typer.Option(False, "-b", help="Create a new branch")
 ):
     storage = ChatStorage()
+    current_branch = storage.get_current_branch()
 
     if b:
         storage.create_branch(branch_name)
+        console.print(f"Created new branch {branch_name} from {current_branch}")
 
     storage.switch_to_branch(branch_name)
+    console.print(f"Switched to branch {branch_name}")
 
 
 @app.command(help="List available branches")
