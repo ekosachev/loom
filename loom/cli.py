@@ -167,7 +167,9 @@ async def _async_send(message: str):
 
     stream = provider.chat_completion(history)
     await ui.consume_stream(stream)
-    storage.add_message(role="assistant", content=ui._buffer)
+    storage.add_message(
+        role="assistant", content=ui._buffer, reasoning=ui._reasoning_buffer
+    )
 
 
 def main():
