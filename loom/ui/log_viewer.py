@@ -88,9 +88,7 @@ class LoomLogViewer:
         console.print(grid)
 
         console.print("\n[dim]" + "─" * console.width + "[/dim]")
-        console.print(
-            "[dim][^/v] to scroll | [Enter] to unfold/fold | [q] to exit[/dim]"
-        )
+        console.print("[dim] j/k to scroll | Enter to unfold/fold | q to exit[/dim]")
 
     def run(self):
         if not self.messages:
@@ -105,9 +103,9 @@ class LoomLogViewer:
 
                 if key in ("q", "Q", "\x1b"):
                     break
-                elif key == "\x1b[A":
+                elif key == "k":
                     self.selected_index = max(0, self.selected_index - 1)
-                elif key == "\x1b[B":
+                elif key == "j":
                     self.selected_index = min(
                         len(self.messages) - 1, self.selected_index + 1
                     )
