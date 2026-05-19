@@ -20,11 +20,7 @@ Currently, `loom` supports **text-to-text modality**, with the unique ability to
 
 ## Installation
 
-<<<<<<< HEAD
 Refer to [INSTALLATION.md](./INSTALLATION.md) for installation instructions.
-=======
-Refer to [INSTALLATION.md] for installation instructions.
->>>>>>> d040914047358431b71380238d09c99a477e4904
 
 ---
 
