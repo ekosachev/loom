@@ -1,7 +1,11 @@
 from typing import AsyncGenerator
 
+from pydantic import ValidationError
+
 from loom.api.base_provider import BaseProvider
 import httpx
+from loom.errors import ProviderException, RateLimited
+from loom.models.error import ErrorResponse
 from loom.models.message import Message
 from loom.models.model import Model
 from loom.models.stream import StreamChunk
@@ -43,6 +47,14 @@ class Provider(BaseProvider):
                     break
 
                 data = chunk.removeprefix("data: ")
+
+                try:
+                    error = ErrorResponse.model_validate_json(json_data=data)
+                    self.handle_error(error)
+
+                except ValidationError:
+                    pass
+
                 yield StreamChunk.model_validate_json(json_data=data)
 
     async def get_model_meta(self, slug: str) -> Model:
@@ -53,3 +65,11 @@ class Provider(BaseProvider):
             name=data["name"],
             slug=data["id"],
         )
+
+    def handle_error(self, error: ErrorResponse):
+        if error.error.code == 429:
+            raise RateLimited(
+                "Request was rate-limited. Try again later or choose a different model"
+            )
+
+        raise ProviderException(error.error.message)

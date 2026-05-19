@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from typing import Optional
 import httpx
 from rich.console import Console
@@ -10,8 +11,10 @@ from pathlib import Path
 
 from loom.database.chat_storage import ChatStorage
 from loom.database.model_manager import ModelManager
+from loom.models.message import UserMessage
 from loom.ui.log_viewer import LoomLogViewer
 from loom.ui.loom_ui import LoomUI
+from loom.errors import ProviderException
 import yaml
 
 
@@ -107,9 +110,25 @@ def status():
 
 
 @app.command(help="Request a new completion using active conversation")
-def send(message: str):
+def send(
+    message: str = typer.Argument(None),
+    file: str = typer.Option(None, "--file", "-f", help="Path to prompt file"),
+):
     storage = ChatStorage()
     active_model = storage.get_active_model()
+
+    if file:
+        with open(file, "r") as f:
+            message = f.read()
+    elif message is None:
+        if not sys.stdin.isatty():
+            message = sys.stdin.read()
+        else:
+            console.print(
+                "[red]Error:[/red] provide message text or path to prompt file"
+            )
+            raise typer.Exit(-1)
+
     asyncio.run(_async_send(message, active_model))
 
 
@@ -231,11 +250,16 @@ async def _async_send(message: str, model_id: str):
 
     provider = _create_provider()
 
-    storage.add_message(role="user", content=message, name="Developer")
     history = storage.get_history()
+    history.append(UserMessage(content=message, name="Developer"))
+    try:
+        stream = provider.chat_completion(history, model_id)
+        await ui.consume_stream(stream)
+    except ProviderException as e:
+        console.print(f"[red bold]Error:[/red bold] {e.__repr__()}")
+        return
 
-    stream = provider.chat_completion(history, model_id)
-    await ui.consume_stream(stream)
+    storage.add_message(role="user", content=message, name="Developer")
     storage.add_message(
         role="assistant", content=ui._buffer, reasoning=ui._reasoning_buffer
     )

@@ -36,3 +36,11 @@ class ConfigurationError(BaseException):
 
 class NoActiveModel(ConfigurationError):
     pass
+
+
+class ProviderException(BaseException):
+    pass
+
+
+class RateLimited(ProviderException):
+    pass
