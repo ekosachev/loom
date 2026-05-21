@@ -10,7 +10,7 @@ class ReadFile(BaseTool):
     def schema(self) -> dict[str, Any]:
         return {
             "type": "function",
-            "funciton": {
+            "function": {
                 "name": self.name,
                 "description": self.description,
                 "parameters": {
@@ -18,7 +18,7 @@ class ReadFile(BaseTool):
                     "properties": {
                         "path": {
                             "type": "string",
-                            "desctiption": "Path to the file. Can be relative or absolute",
+                            "description": "Path to the file. Can be relative or absolute",
                         },
                         "start_line": {
                             "type": "integer",

@@ -52,3 +52,7 @@ class ToolManagerError(BaseException):
 
 class DuplicateToolName(ToolManagerError):
     pass
+
+
+class ToolNotFound(ToolManagerError):
+    pass
