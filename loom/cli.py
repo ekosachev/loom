@@ -15,6 +15,7 @@ from loom.models.message import UserMessage
 from loom.ui.log_viewer import LoomLogViewer
 from loom.ui.loom_ui import LoomUI
 from loom.errors import ProviderException
+from loom.tools.tool_cli import tools_app
 import yaml
 
 
@@ -26,6 +27,7 @@ app = typer.Typer(help="Loom: CLI interface for LLMs with git-like context manag
 
 models_app = typer.Typer(help="Managing available LLMs")
 app.add_typer(models_app, name="models")
+app.add_typer(tools_app, name="tool")
 
 provider: Optional[Provider] = None
 

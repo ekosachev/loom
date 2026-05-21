@@ -44,3 +44,11 @@ class ProviderException(BaseException):
 
 class RateLimited(ProviderException):
     pass
+
+
+class ToolManagerError(BaseException):
+    pass
+
+
+class DuplicateToolName(ToolManagerError):
+    pass
