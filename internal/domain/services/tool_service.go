@@ -13,6 +13,6 @@ func NewToolService(toolStorage ports.ToolStoragePort) *ToolService {
 	return &ToolService{toolStorage: toolStorage}
 }
 
-func (s *ToolService) ListTools() []models.Tool {
+func (s *ToolService) ListTools() ([]models.Tool, error) {
 	return s.toolStorage.LoadAllTools()
 }

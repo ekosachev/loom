@@ -34,5 +34,5 @@ type ModelServicePort interface {
 }
 
 type ToolServicePort interface {
-	ListTools() []models.Tool
+	ListTools() ([]models.Tool, error)
 }

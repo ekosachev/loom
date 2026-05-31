@@ -29,7 +29,9 @@ type Model struct {
 }
 
 type Tool struct {
-	Name string
+	Meta struct {
+		Name string `yaml:"name"`
+	} `yaml:"meta"`
 }
 
 type Config struct {

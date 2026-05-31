@@ -21,10 +21,13 @@ func (a *CLIApp) initToolListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "Displays a list of available tools",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tools := a.toolService.ListTools()
+			tools, err := a.toolService.ListTools()
+			if err != nil {
+				return err
+			}
 
 			for _, tool := range tools {
-				pterm.Printfln("%s", tool.Name)
+				pterm.Printfln("%s", tool.Meta.Name)
 			}
 
 			return nil

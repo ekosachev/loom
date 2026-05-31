@@ -48,7 +48,7 @@ type StoragePort interface {
 }
 
 type ToolStoragePort interface {
-	LoadAllTools() []models.Tool
+	LoadAllTools() ([]models.Tool, error)
 }
 
 type LLMPort interface {
