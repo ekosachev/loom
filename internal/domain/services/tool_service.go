@@ -1,17 +1,18 @@
 package services
 
-import "github.com/ekosachev/loom/internal/domain/models"
+import (
+	"github.com/ekosachev/loom/internal/domain/models"
+	"github.com/ekosachev/loom/internal/ports"
+)
 
-type ToolService struct{}
+type ToolService struct {
+	toolStorage ports.ToolStoragePort
+}
 
-func NewToolService() *ToolService {
-	return &ToolService{}
+func NewToolService(toolStorage ports.ToolStoragePort) *ToolService {
+	return &ToolService{toolStorage: toolStorage}
 }
 
 func (s *ToolService) ListTools() []models.Tool {
-	return []models.Tool{
-		{Name: "test-tool-1"},
-		{Name: "test-tool-2"},
-		{Name: "test-tool-3"},
-	}
+	return s.toolStorage.LoadAllTools()
 }

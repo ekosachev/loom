@@ -47,6 +47,10 @@ type StoragePort interface {
 	StateStorage
 }
 
+type ToolStoragePort interface {
+	LoadAllTools() []models.Tool
+}
+
 type LLMPort interface {
 	StreamCompletion(ctx context.Context, cfg *models.Config, modelID string, history []models.Message) (<-chan string, <-chan error, error)
 }
