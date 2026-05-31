@@ -28,6 +28,10 @@ type Model struct {
 	SupportsTools bool   `yaml:"supports_tools"`
 }
 
+type Tool struct {
+	Name string
+}
+
 type Config struct {
 	Openrouter struct {
 		Key string `yaml:"key"`

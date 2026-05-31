@@ -32,3 +32,7 @@ type ModelServicePort interface {
 	GetCurrentModel(ctx context.Context) (*models.Model, error)
 	SetCurrentModel(ctx context.Context, name string) error
 }
+
+type ToolServicePort interface {
+	ListTools() []models.Tool
+}

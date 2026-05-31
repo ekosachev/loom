@@ -60,7 +60,8 @@ func main() {
 	branchService := services.NewBranchServcie(sqliteRepo, sqliteRepo)
 	messageService := services.NewMessageService(sqliteRepo)
 	modelService := services.NewModelService(modelStorage, openRouterClient, sqliteRepo)
+	toolService := services.NewToolService()
 
-	cliApp := cli.NewCLIApp(chatService, workspaceService, branchService, messageService, modelService, &config)
+	cliApp := cli.NewCLIApp(chatService, workspaceService, branchService, messageService, modelService, toolService, &config)
 	cliApp.Execute()
 }

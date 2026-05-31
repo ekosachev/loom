@@ -18,6 +18,7 @@ type CLIApp struct {
 	branchService    ports.BranchServicePort
 	messageService   ports.MessageServicePort
 	modelService     ports.ModelServicePort
+	toolService      ports.ToolServicePort
 	config           *models.Config
 }
 
@@ -27,6 +28,7 @@ func NewCLIApp(
 	branchService ports.BranchServicePort,
 	messageService ports.MessageServicePort,
 	modelService ports.ModelServicePort,
+	toolService ports.ToolServicePort,
 	cfg *models.Config,
 ) *CLIApp {
 	app := &CLIApp{
@@ -39,6 +41,7 @@ func NewCLIApp(
 		branchService:    branchService,
 		messageService:   messageService,
 		modelService:     modelService,
+		toolService:      toolService,
 		config:           cfg,
 	}
 
@@ -49,6 +52,7 @@ func NewCLIApp(
 	app.rootCmd.AddCommand(app.checkoutCmd())
 	app.rootCmd.AddCommand(app.initModelCmd())
 	app.rootCmd.AddCommand(app.initBranchCmd())
+	app.rootCmd.AddCommand(app.initToolCmd())
 
 	return app
 }
