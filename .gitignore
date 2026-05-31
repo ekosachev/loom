@@ -2,4 +2,6 @@ venv/
 .env
 loom.db
 **/__pycache__/
+main.exe
 loom_cli.egg-info/
+loom.exe
