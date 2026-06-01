@@ -35,4 +35,5 @@ type ModelServicePort interface {
 
 type ToolServicePort interface {
 	ListTools() ([]models.Tool, error)
+	GetToolByName(toolName string) (*models.Tool, error)
 }

@@ -65,3 +65,8 @@ func loadToolManifest(path string) (*models.Tool, error) {
 
 	return &tool, nil
 }
+
+func (s *ToolStorage) GetToolByName(toolName string) (*models.Tool, error) {
+	manifestPath := filepath.Join(s.toolsDirPath, toolName, "manifest.yaml")
+	return loadToolManifest(manifestPath)
+}

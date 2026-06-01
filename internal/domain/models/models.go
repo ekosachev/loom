@@ -32,6 +32,17 @@ type Tool struct {
 	Meta struct {
 		Name string `yaml:"name"`
 	} `yaml:"meta"`
+	Tool struct {
+		Type        string `yaml:"type"`
+		Description string `yaml:"description"`
+		Parameters  struct {
+			Type       string `yaml:"type"`
+			Properties map[string]struct {
+				Type string `yaml:"type"`
+			} `yaml:"properties"`
+			Required []string `yaml:"required"`
+		} `yaml:"parameters"`
+	} `yaml:"tool"`
 }
 
 type Config struct {

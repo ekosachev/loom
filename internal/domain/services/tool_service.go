@@ -16,3 +16,7 @@ func NewToolService(toolStorage ports.ToolStoragePort) *ToolService {
 func (s *ToolService) ListTools() ([]models.Tool, error) {
 	return s.toolStorage.LoadAllTools()
 }
+
+func (s *ToolService) GetToolByName(toolName string) (*models.Tool, error) {
+	return s.toolStorage.GetToolByName(toolName)
+}
