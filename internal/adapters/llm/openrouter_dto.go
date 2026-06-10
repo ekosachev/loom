@@ -80,7 +80,7 @@ func preprocessTool(tool models.Tool) requestToolDTO {
 	}
 
 	return requestToolDTO{
-		Type: tool.Tool.Type,
+		Type: string(tool.Tool.Type),
 		Function: toolFunctionDTO{
 			Name:        tool.Meta.Name,
 			Description: tool.Meta.Description,

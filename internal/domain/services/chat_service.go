@@ -148,7 +148,7 @@ func (cs *ChatService) ExecuteChat(
 				}
 
 				var toolResult *models.ToolResponse
-				if approval.Approved && approval.ID == toolCall.ID {
+				if approval.Approved {
 					toolResult, err = cs.toolService.ExecuteToolCall(ctx, toolCall)
 					if err != nil {
 						resutltCh <- emitErr(err)
@@ -167,6 +167,7 @@ func (cs *ChatService) ExecuteChat(
 					ToolCallID: &toolResult.ID,
 					Content:    toolResult.Content,
 				}
+
 				err = cs.messageService.SaveMessage(ctx, currentBranch.ID, toolMessage)
 				if err != nil {
 					resutltCh <- emitErr(err)

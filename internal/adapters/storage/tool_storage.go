@@ -13,12 +13,16 @@ type ToolStorage struct {
 }
 
 func NewToolStorage(toolsDirPath string) (*ToolStorage, error) {
-	err := os.MkdirAll(toolsDirPath, 0755)
+	err := os.MkdirAll(toolsDirPath, 0o755)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ToolStorage{toolsDirPath: toolsDirPath}, nil
+}
+
+func (s *ToolStorage) GetToolsRoot() string {
+	return s.toolsDirPath
 }
 
 func (s *ToolStorage) LoadAllTools() ([]models.Tool, error) {

@@ -50,8 +50,13 @@ type StoragePort interface {
 type ToolStoragePort interface {
 	LoadAllTools() ([]models.Tool, error)
 	GetToolByName(toolName string) (*models.Tool, error)
+	GetToolsRoot() string
 }
 
 type LLMPort interface {
 	StreamCompletion(ctx context.Context, request models.CompletionRequest) (<-chan models.StreamEvent, error)
+}
+
+type ToolExecutor interface {
+	ExecuteTool(toolCall models.ToolExecutionRequest) (*models.ToolResponse, error)
 }
