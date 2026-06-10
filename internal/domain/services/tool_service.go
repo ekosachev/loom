@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+
 	"github.com/ekosachev/loom/internal/domain/models"
 	"github.com/ekosachev/loom/internal/ports"
 )
@@ -19,4 +21,8 @@ func (s *ToolService) ListTools() ([]models.Tool, error) {
 
 func (s *ToolService) GetToolByName(toolName string) (*models.Tool, error) {
 	return s.toolStorage.GetToolByName(toolName)
+}
+
+func (s *ToolService) ExecuteToolCall(ctx context.Context, toolCall models.ToolCall) (*models.ToolResponse, error) {
+	return &models.ToolResponse{ID: toolCall.ID, Content: "Hello world!"}, nil
 }

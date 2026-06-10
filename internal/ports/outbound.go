@@ -53,5 +53,5 @@ type ToolStoragePort interface {
 }
 
 type LLMPort interface {
-	StreamCompletion(ctx context.Context, cfg *models.Config, modelID string, history []models.Message) (<-chan string, <-chan error, error)
+	StreamCompletion(ctx context.Context, request models.CompletionRequest) (<-chan models.StreamEvent, error)
 }

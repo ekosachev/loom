@@ -3,11 +3,12 @@ package models
 import "time"
 
 type Message struct {
-	ID        int64     `json:"id"`
-	ParentID  *int64    `json:"parent_id"`
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
-	Timestamp time.Time `json:"timestamp"`
+	ID         int64  `json:"id"`
+	ParentID   *int64 `json:"parent_id"`
+	ToolCallID *string
+	Role       string    `json:"role"`
+	Content    string    `json:"content"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type Branch struct {
@@ -28,21 +29,59 @@ type Model struct {
 	SupportsTools bool   `yaml:"supports_tools"`
 }
 
+type CompletionRequest struct {
+	ThreadHistory []Message
+	Model         Model
+	Tools         []Tool
+}
+
+type StreamEvent struct {
+	Type StreamEventType
+
+	Text     string
+	ToolCall *ToolCall
+	Err      error
+}
+
+type StreamEventType int
+
+const (
+	EventText StreamEventType = iota
+	EventToolCall
+	EventToolCallRequest
+	EventError
+	EventDone
+	EventLoopComplete
+)
+
 type Tool struct {
 	Meta struct {
-		Name string `yaml:"name"`
+		Name        string `yaml:"name"`
+		Description string `yaml:"description"`
 	} `yaml:"meta"`
 	Tool struct {
-		Type        string `yaml:"type"`
-		Description string `yaml:"description"`
-		Parameters  struct {
+		Type       string `yaml:"type"`
+		Parameters struct {
 			Type       string `yaml:"type"`
 			Properties map[string]struct {
-				Type string `yaml:"type"`
+				Type        string `yaml:"type"`
+				Description string `yaml:"description"`
+				Default     any    `yaml:"default"`
 			} `yaml:"properties"`
 			Required []string `yaml:"required"`
 		} `yaml:"parameters"`
 	} `yaml:"tool"`
+}
+
+type ToolCall struct {
+	Name      string
+	ID        string
+	Arguments string
+}
+
+type ToolResponse struct {
+	ID      string
+	Content string
 }
 
 type Config struct {
@@ -53,4 +92,14 @@ type Config struct {
 	Models struct {
 		Default string `yaml:"default"`
 	} `yaml:"models"`
+}
+
+type ApprovalResponse struct {
+	ID       string
+	Approved bool
+}
+
+type AgentSession struct {
+	Events    <-chan StreamEvent
+	Approvals chan<- ApprovalResponse
 }

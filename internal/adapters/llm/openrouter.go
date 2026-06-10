@@ -16,78 +16,76 @@ import (
 
 type OpenRouterAdapter struct {
 	client *http.Client
+	key    string
 }
 
-func NewOpenRouterAdapter() *OpenRouterAdapter {
-	return &OpenRouterAdapter{client: &http.Client{}}
-}
-
-type openRouterMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type openRouterRequest struct {
-	Model    string              `json:"model"`
-	Messages []openRouterMessage `json:"messages"`
-	Stream   bool                `json:"stream"`
+func NewOpenRouterAdapter(key string) *OpenRouterAdapter {
+	return &OpenRouterAdapter{client: &http.Client{}, key: key}
 }
 
 func (a *OpenRouterAdapter) StreamCompletion(
 	ctx context.Context,
-	cfg *models.Config,
-	modelID string,
-	history []models.Message,
-) (<-chan string, <-chan error, error) {
-	outCh := make(chan string)
-	errCh := make(chan error)
+	request models.CompletionRequest,
+) (<-chan models.StreamEvent, error) {
+	eventCh := make(chan models.StreamEvent)
 
-	reqMessages := make([]openRouterMessage, len(history))
+	reqMessages := make([]openRouterMessage, len(request.ThreadHistory))
 
-	for i, m := range history {
+	for i, m := range request.ThreadHistory {
 		reqMessages[i] = openRouterMessage{Role: m.Role, Content: m.Content}
+		if m.ToolCallID != nil {
+			reqMessages[i].ToolCallID = *m.ToolCallID
+		}
 	}
 
-	payload := openRouterRequest{
-		Model:    modelID,
-		Messages: reqMessages,
-		Stream:   true,
+	toolsPreprocessed := make([]requestToolDTO, len(request.Tools))
+	for i, t := range request.Tools {
+		toolsPreprocessed[i] = preprocessTool(t)
+	}
+
+	modelID := fmt.Sprintf("%s/%s", request.Model.Provider, request.Model.Slug)
+	payload := openRouterRequestDTO{
+		Model:      modelID,
+		Messages:   reqMessages,
+		Stream:     true,
+		ToolChoice: "auto",
+		Tools:      toolsPreprocessed,
 	}
 
 	jsonData, err := json.Marshal(payload)
-
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cfg.Openrouter.Key))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.key))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("HTTP-Referer", "https://github.com/ekosachev/loom")
 	req.Header.Set("X-Title", "Loom")
 
 	resp, err := a.client.Do(req)
-
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	go func() {
 		defer resp.Body.Close()
-
-		defer close(outCh)
-		defer close(errCh)
+		defer close(eventCh)
 
 		if resp.StatusCode != http.StatusOK {
-			errCh <- fmt.Errorf("bad status code: %d", resp.StatusCode)
+			eventCh <- models.StreamEvent{
+				Type: models.EventError,
+				Err:  err,
+			}
 			return
 		}
 
 		scanner := bufio.NewScanner(resp.Body)
+		toolCalls := map[int]*toolCallDTO{}
 
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -103,30 +101,59 @@ func (a *OpenRouterAdapter) StreamCompletion(
 			var chunk struct {
 				Choices []struct {
 					Delta struct {
-						Content string `json:"content"`
+						Content   string        `json:"content"`
+						ToolCalls []toolCallDTO `json:"tool_calls"`
 					} `json:"delta"`
 				} `json:"choices"`
 			}
 
 			if err := json.Unmarshal([]byte(dataStr), &chunk); err != nil {
-				errCh <- err
+				eventCh <- models.StreamEvent{
+					Type: models.EventError,
+					Err:  err,
+				}
 				return
 			}
 
 			if len(chunk.Choices) > 0 {
 				content := chunk.Choices[0].Delta.Content
+				chunkToolCalls := chunk.Choices[0].Delta.ToolCalls
+
+				for _, call := range chunkToolCalls {
+					if _, ok := toolCalls[call.Index]; !ok {
+						toolCalls[call.Index] = &call
+					} else {
+						toolCalls[call.Index].combineChunks(call)
+					}
+				}
+
 				if content != "" {
 					select {
-					case outCh <- content:
+					case eventCh <- models.StreamEvent{
+						Type: models.EventText,
+						Text: content,
+					}:
 					case <-ctx.Done():
-						return
+						eventCh <- models.StreamEvent{Type: models.EventDone}
+						break
 					}
 				}
 			}
 		}
+
+		for _, call := range toolCalls {
+			eventCh <- models.StreamEvent{
+				Type: models.EventToolCall,
+				ToolCall: &models.ToolCall{
+					Name:      call.Function.Name,
+					ID:        call.ID,
+					Arguments: call.Function.Arguments,
+				},
+			}
+		}
 	}()
 
-	return outCh, errCh, nil
+	return eventCh, nil
 }
 
 func (a *OpenRouterAdapter) GetMetaForModel(ctx context.Context, cfg models.Config, provider string, slug string) (*models.Model, error) {
@@ -153,7 +180,6 @@ func (a *OpenRouterAdapter) GetMetaForModel(ctx context.Context, cfg models.Conf
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
-
 	if err != nil {
 		return nil, err
 	}

@@ -23,7 +23,6 @@ func NewBranchServcie(branchStorage ports.BranchStoragePort, stateStorage ports.
 
 func (s *BranchService) GetActiveBranch(ctx context.Context, workspaceName string) (*models.Branch, error) {
 	activeBranchId, err := s.stateStorage.GetState(ctx, workspaceName+"/head")
-
 	if err != nil {
 		return nil, err
 	}
@@ -54,4 +53,8 @@ func (s *BranchService) ActivateBranch(ctx context.Context, workspaceName string
 
 func (s *BranchService) GetAllBranches(ctx context.Context, workspaceName string) ([]models.Branch, error) {
 	return s.branchStorage.GetAllBranches(ctx, workspaceName)
+}
+
+func (s *BranchService) UpdateBranchHead(ctx context.Context, branchID int64, messageID int64) error {
+	return s.branchStorage.UpdateBranchHead(ctx, branchID, messageID)
 }

@@ -20,10 +20,12 @@ type BranchServicePort interface {
 	SaveBranch(ctx context.Context, branch *models.Branch) error
 	ActivateBranch(ctx context.Context, workspaceName string, branchID int64) error
 	GetAllBranches(ctx context.Context, workspaceName string) ([]models.Branch, error)
+	UpdateBranchHead(ctx context.Context, branchID int64, messageID int64) error
 }
 
 type MessageServicePort interface {
 	GetThreadContext(ctx context.Context, headID int64) ([]models.Message, error)
+	SaveMessage(ctx context.Context, branchID int64, message *models.Message) error
 }
 
 type ModelServicePort interface {
@@ -33,7 +35,12 @@ type ModelServicePort interface {
 	SetCurrentModel(ctx context.Context, name string) error
 }
 
+type ChatServicePort interface {
+	ExecuteChat(ctx context.Context, message string) (*models.AgentSession, error)
+}
+
 type ToolServicePort interface {
 	ListTools() ([]models.Tool, error)
 	GetToolByName(toolName string) (*models.Tool, error)
+	ExecuteToolCall(ctx context.Context, toolCall models.ToolCall) (*models.ToolResponse, error)
 }

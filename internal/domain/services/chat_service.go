@@ -2,93 +2,194 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/ekosachev/loom/internal/domain/models"
 	"github.com/ekosachev/loom/internal/ports"
 )
 
+func emitErr(err error) models.StreamEvent {
+	return models.StreamEvent{
+		Type: models.EventError,
+		Err:  err,
+	}
+}
+
 type ChatService struct {
-	storage ports.StoragePort
-	llm     ports.LLMPort
+	workspaceService ports.WorkspaceServicePort
+	branchService    ports.BranchServicePort
+	messageService   ports.MessageServicePort
+	modelService     ports.ModelServicePort
+	toolService      ports.ToolServicePort
+	llm              ports.LLMPort
 }
 
-func NewChatService(s ports.StoragePort, l ports.LLMPort) *ChatService {
-	return &ChatService{storage: s, llm: l}
+func NewChatService(
+	workspaceService ports.WorkspaceServicePort,
+	branchService ports.BranchServicePort,
+	messageService ports.MessageServicePort,
+	modelService ports.ModelServicePort,
+	toolService ports.ToolServicePort,
+	llm ports.LLMPort,
+) *ChatService {
+	return &ChatService{
+		workspaceService: workspaceService,
+		branchService:    branchService,
+		messageService:   messageService,
+		modelService:     modelService,
+		toolService:      toolService,
+		llm:              llm,
+	}
 }
 
-func (cs *ChatService) ExecuteChat(ctx context.Context, branchID int64, modelID string, prompt string, cfg *models.Config, onChunk func(string)) error {
-	branch, err := cs.storage.GetBranch(ctx, branchID)
-	var parentID *int64
-	if err == nil && branch != nil {
-		parentID = branch.CurrentMessageID
+func (cs *ChatService) ExecuteChat(
+	ctx context.Context,
+	message string,
+) (*models.AgentSession, error) {
+	currentWorkspace, err := cs.workspaceService.GetActiveWorkspace(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	currentBranch, err := cs.branchService.GetActiveBranch(ctx, currentWorkspace.Name)
+	if err != nil {
+		return nil, err
 	}
 
 	userMsg := &models.Message{
-		ParentID: parentID,
+		ParentID: currentBranch.CurrentMessageID,
 		Role:     "user",
-		Content:  prompt,
+		Content:  message,
 	}
 
-	if err := cs.storage.SaveMessage(ctx, userMsg); err != nil {
-		return err
+	if err = cs.messageService.SaveMessage(ctx, currentBranch.ID, userMsg); err != nil {
+		return nil, err
 	}
 
-	history, err := cs.storage.GetThreadContext(ctx, userMsg.ID)
+	model, err := cs.modelService.GetCurrentModel(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	outCh, errCh, err := cs.llm.StreamCompletion(ctx, cfg, modelID, history)
+	tools, err := cs.toolService.ListTools()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var assistantResponse strings.Builder
+	resutltCh := make(chan models.StreamEvent)
+	approveCh := make(chan models.ApprovalResponse)
+	toolCalls := []models.ToolCall{}
+	headID := userMsg.ID
 
-	firstChunk := true
+	go func() {
+		defer close(resutltCh)
+		defer close(approveCh)
+		for {
 
-	for outCh != nil || errCh != nil {
-		select {
-		case chunk, ok := <-outCh:
-			if !ok {
-				outCh = nil
-				continue
+			history, err := cs.messageService.GetThreadContext(ctx, headID)
+			if err != nil {
+				resutltCh <- emitErr(err)
+				return
+			}
+			clear(toolCalls)
+			toolCalls = toolCalls[:0]
+
+			eventCh, err := cs.llm.StreamCompletion(ctx, models.CompletionRequest{
+				ThreadHistory: history,
+				Model:         *model,
+				Tools:         tools,
+			})
+			if err != nil {
+				resutltCh <- emitErr(err)
+				return
 			}
 
-			if firstChunk {
-				chunk = strings.TrimLeft(chunk, "\r\n ")
-				if chunk == "" {
-					continue
+			var messageContent strings.Builder
+
+			for {
+				event, ok := <-eventCh
+				if !ok {
+					break
 				}
 
-				firstChunk = false
+				resutltCh <- event
+				switch event.Type {
+				case models.EventToolCall:
+					toolCalls = append(toolCalls, *event.ToolCall)
+				case models.EventDone:
+					return
+				case models.EventText:
+					messageContent.Write([]byte(event.Text))
+				}
 			}
 
-			assistantResponse.WriteString(chunk)
-			onChunk(chunk)
-		case err, ok := <-errCh:
-			if !ok {
-				errCh = nil
-				continue
+			modelMessage := &models.Message{
+				ParentID: &headID,
+				Role:     "assistant",
+				Content:  messageContent.String(),
 			}
-			return err
-		case <-ctx.Done():
-			return ctx.Err()
+			err = cs.messageService.SaveMessage(ctx, currentBranch.ID, modelMessage)
+			if err != nil {
+				resutltCh <- emitErr(err)
+			}
+			headID = modelMessage.ID
+
+			for _, toolCall := range toolCalls {
+				resutltCh <- models.StreamEvent{
+					Type:     models.EventToolCallRequest,
+					ToolCall: &toolCall,
+				}
+
+				approval, ok := <-approveCh
+				if !ok {
+					resutltCh <- emitErr(fmt.Errorf("failed to read from approveCh"))
+					return
+				}
+
+				var toolResult *models.ToolResponse
+				if approval.Approved && approval.ID == toolCall.ID {
+					toolResult, err = cs.toolService.ExecuteToolCall(ctx, toolCall)
+					if err != nil {
+						resutltCh <- emitErr(err)
+						return
+					}
+				} else {
+					toolResult = &models.ToolResponse{
+						ID:      toolCall.ID,
+						Content: "ERROR: User has DENIED the tool call.",
+					}
+				}
+
+				toolMessage := &models.Message{
+					ParentID:   &headID,
+					Role:       "tool",
+					ToolCallID: &toolResult.ID,
+					Content:    toolResult.Content,
+				}
+				err = cs.messageService.SaveMessage(ctx, currentBranch.ID, toolMessage)
+				if err != nil {
+					resutltCh <- emitErr(err)
+					return
+				}
+				headID = toolMessage.ID
+			}
+
+			err = cs.branchService.UpdateBranchHead(ctx, currentBranch.ID, headID)
+			if err != nil {
+				resutltCh <- emitErr(err)
+				return
+			}
+
+			if !model.SupportsTools || len(toolCalls) == 0 {
+				resutltCh <- models.StreamEvent{Type: models.EventLoopComplete}
+				return
+			}
 		}
-	}
+	}()
 
-	assistantResponseStr := strings.TrimRight(assistantResponse.String(), "\r\n ")
-
-	assistantMsg := &models.Message{
-		ParentID: &userMsg.ID,
-		Role:     "assistant",
-		Content:  assistantResponseStr,
-	}
-
-	if err := cs.storage.SaveMessage(ctx, assistantMsg); err != nil {
-		return err
-	}
-
-	return cs.storage.UpdateBranchHead(ctx, branchID, assistantMsg.ID)
+	return &models.AgentSession{
+		Events:    resutltCh,
+		Approvals: approveCh,
+	}, nil
 }

@@ -15,7 +15,6 @@ import (
 
 func main() {
 	home, err := os.UserHomeDir()
-
 	if err != nil {
 		pterm.Fatal.Println("failed to find user's home directory")
 		return
@@ -50,24 +49,32 @@ func main() {
 
 	modelStorage, err := storage.NewModelStorage(loomDir + "\\models.yaml")
 	if err != nil {
-		pterm.Fatal.Printfln("failed to initiate model storage: %w", err)
+		pterm.Fatal.PrintOnError("failed to initiate model storage: %w", err)
 		return
 	}
 
 	toolsPath := loomDir + "\\tools"
 	toolStorage, err := storage.NewToolStorage(toolsPath)
 	if err != nil {
-		pterm.Fatal.Printfln("failed to initiate tool storage: %w", err)
+		pterm.Fatal.PrintOnError("failed to initiate tool storage: %w", err)
 		return
 	}
 
-	openRouterClient := llm.NewOpenRouterAdapter()
-	chatService := services.NewChatService(sqliteRepo, openRouterClient)
+	openRouterClient := llm.NewOpenRouterAdapter(config.Openrouter.Key)
 	workspaceService := services.NewWorkspaceService(sqliteRepo, sqliteRepo, sqliteRepo)
 	branchService := services.NewBranchServcie(sqliteRepo, sqliteRepo)
-	messageService := services.NewMessageService(sqliteRepo)
+	messageService := services.NewMessageService(sqliteRepo, sqliteRepo)
 	modelService := services.NewModelService(modelStorage, openRouterClient, sqliteRepo)
 	toolService := services.NewToolService(toolStorage)
+
+	chatService := services.NewChatService(
+		workspaceService,
+		branchService,
+		messageService,
+		modelService,
+		toolService,
+		openRouterClient,
+	)
 
 	cliApp := cli.NewCLIApp(chatService, workspaceService, branchService, messageService, modelService, toolService, &config)
 	cliApp.Execute()

@@ -52,7 +52,7 @@ func (a *CLIApp) initToolInfoCmd() *cobra.Command {
 			}
 
 			pterm.FgCyan.Printfln("Tool: %s", tool.Meta.Name)
-			pterm.Println(tool.Tool.Description)
+			pterm.Println(tool.Meta.Description)
 
 			if len(tool.Tool.Parameters.Properties) == 0 {
 				return nil

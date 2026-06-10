@@ -13,7 +13,7 @@ import (
 
 type CLIApp struct {
 	rootCmd          *cobra.Command
-	chatService      *services.ChatService
+	chatService      ports.ChatServicePort
 	workspaceService ports.WorkspaceServicePort
 	branchService    ports.BranchServicePort
 	messageService   ports.MessageServicePort
@@ -70,7 +70,6 @@ func (app *CLIApp) statusCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			activeWs, err := app.workspaceService.GetActiveWorkspace(ctx)
-
 			if err != nil {
 				return fmt.Errorf("failed to get active workspace: %w", err)
 			}

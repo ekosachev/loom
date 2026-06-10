@@ -32,6 +32,7 @@ func NewSQLiteAdapter(dsn string) (*SQLiteAdapter, error) {
 	CREATE TABLE IF NOT EXISTS messages (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		parent_id INTEGER,
+		tool_call_id TEXT,
 		role TEXT NOT NULL,
 		content TEXT NOT NULL,
 		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -181,9 +182,9 @@ func (s *SQLiteAdapter) GetAllBranches(ctx context.Context, workspaceName string
 }
 
 func (s *SQLiteAdapter) SaveMessage(ctx context.Context, msg *models.Message) error {
-	query := `INSERT INTO messages (parent_id, role, content) VALUES (?, ?, ?);`
+	query := `INSERT INTO messages (parent_id, role, content, tool_call_id) VALUES (?, ?, ?, ?);`
 
-	res, err := s.db.ExecContext(ctx, query, msg.ParentID, msg.Role, msg.Content)
+	res, err := s.db.ExecContext(ctx, query, msg.ParentID, msg.Role, msg.Content, msg.ToolCallID)
 	if err != nil {
 		return err
 	}
@@ -198,11 +199,11 @@ func (s *SQLiteAdapter) SaveMessage(ctx context.Context, msg *models.Message) er
 }
 
 func (s *SQLiteAdapter) GetMessage(ctx context.Context, id int64) (*models.Message, error) {
-	query := `SELECT id, parent_id, role, content, timestamp FROM messages WHERE id = ?;`
+	query := `SELECT id, parent_id, role, content, tool_call_id, timestamp FROM messages WHERE id = ?;`
 	row := s.db.QueryRowContext(ctx, query, id)
 
 	var m models.Message
-	if err := row.Scan(&m.ID, &m.ParentID, &m.Role, &m.Content, &m.Timestamp); err != nil {
+	if err := row.Scan(&m.ID, &m.ParentID, &m.Role, &m.Content, &m.ToolCallID, &m.Timestamp); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -214,13 +215,13 @@ func (s *SQLiteAdapter) GetMessage(ctx context.Context, id int64) (*models.Messa
 func (s *SQLiteAdapter) GetThreadContext(ctx context.Context, headMessageID int64) ([]models.Message, error) {
 	query := `
 	WITH RECURSIVE thread AS (
-		SELECT id, parent_id, role, content, timestamp FROM messages WHERE id = ?
+		SELECT id, parent_id, role, content, tool_call_id, timestamp FROM messages WHERE id = ?
 		UNION ALL
-		SELECT m.id, m.parent_id, m.role, m.content, m.timestamp 
+		SELECT m.id, m.parent_id, m.role, m.content, m.tool_call_id, m.timestamp 
 		FROM messages m
 		JOIN thread t ON m.id = t.parent_id
 	)
-	SELECT id, parent_id, role, content, timestamp FROM thread;`
+	SELECT id, parent_id, role, content, tool_call_id, timestamp FROM thread;`
 
 	rows, err := s.db.QueryContext(ctx, query, headMessageID)
 	if err != nil {
@@ -231,7 +232,7 @@ func (s *SQLiteAdapter) GetThreadContext(ctx context.Context, headMessageID int6
 	var history []models.Message
 	for rows.Next() {
 		var m models.Message
-		if err := rows.Scan(&m.ID, &m.ParentID, &m.Role, &m.Content, &m.Timestamp); err != nil {
+		if err := rows.Scan(&m.ID, &m.ParentID, &m.Role, &m.Content, &m.ToolCallID, &m.Timestamp); err != nil {
 			return nil, err
 		}
 		history = append(history, m)
@@ -271,7 +272,6 @@ func (s *SQLiteAdapter) SetState(ctx context.Context, key string, value string) 
 	`
 
 	_, err := s.db.ExecContext(ctx, query, key, value, value)
-
 	if err != nil {
 		return err
 	}
