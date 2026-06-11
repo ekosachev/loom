@@ -35,7 +35,16 @@ func (e *StarlarkExecutor) ExecuteTool(toolCall models.ToolExecutionRequest) (*m
 		}
 	}
 
-	globals, err := starlark.ExecFileOptions(&syntax.FileOptions{}, &starlark.Thread{}, scriptPath, nil, predeclared)
+	fileOptions := syntax.FileOptions{
+		Set:               true,
+		While:             true,
+		TopLevelControl:   true,
+		GlobalReassign:    true,
+		LoadBindsGlobally: false,
+		Recursion:         true,
+	}
+
+	globals, err := starlark.ExecFileOptions(&fileOptions, &starlark.Thread{}, scriptPath, nil, predeclared)
 	if err != nil {
 		return nil, err
 	}

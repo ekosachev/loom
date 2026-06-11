@@ -37,7 +37,11 @@ func (s *ToolService) ExecuteToolCall(ctx context.Context, toolCall models.ToolC
 		return nil, err
 	}
 
-	var arguments map[string]any
+	arguments := map[string]any{}
+	for prop, propConfig := range tool.Tool.Parameters.Properties {
+		arguments[prop] = propConfig.Default
+	}
+
 	if err := json.Unmarshal([]byte(toolCall.Arguments), &arguments); err != nil {
 		return nil, err
 	}
@@ -48,6 +52,9 @@ func (s *ToolService) ExecuteToolCall(ctx context.Context, toolCall models.ToolC
 		Arguments: arguments,
 	}
 	toolResult, err := s.executors[executionRequest.Runtime.Type].ExecuteTool(executionRequest)
+	if toolResult == nil {
+		toolResult = &models.ToolResponse{}
+	}
 	if err != nil {
 		toolResult.Content = err.Error()
 	}

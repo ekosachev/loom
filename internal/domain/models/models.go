@@ -105,7 +105,7 @@ type Tool struct {
 			Properties map[string]struct {
 				Type        string `yaml:"type"`
 				Description string `yaml:"description"`
-				Default     any    `yaml:"default"`
+				Default     any    `yaml:"default" binding:"omitempty"`
 			} `yaml:"properties"`
 			Required []string `yaml:"required"`
 		} `yaml:"parameters"`

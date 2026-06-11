@@ -157,7 +157,7 @@ func (cs *ChatService) ExecuteChat(
 				} else {
 					toolResult = &models.ToolResponse{
 						ID:      toolCall.ID,
-						Content: "ERROR: User has DENIED the tool call.",
+						Content: "User has DENIED the tool call.",
 					}
 				}
 
