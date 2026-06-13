@@ -2,6 +2,7 @@ package basicchatui
 
 import (
 	"context"
+	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
@@ -23,6 +24,8 @@ type model struct {
 	renderedMarkdown string
 	state            sessionState
 	width            int
+	startTime        time.Time
+	ttft             time.Duration
 }
 
 func (m model) Init() tea.Cmd {
@@ -37,9 +40,10 @@ func RunUI(ctx context.Context, session models.AgentSession) error {
 	s.Spinner = spinner.Dot
 
 	p := tea.NewProgram(model{
-		spinner: s,
-		session: session,
-		state:   stateWaiting,
+		spinner:   s,
+		session:   session,
+		state:     stateWaiting,
+		startTime: time.Now(),
 	})
 	_, err := p.Run()
 	return err

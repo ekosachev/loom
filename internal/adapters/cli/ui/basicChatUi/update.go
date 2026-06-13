@@ -1,6 +1,8 @@
 package basicchatui
 
 import (
+	"time"
+
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/glamour/v2"
@@ -28,6 +30,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
+		if m.state == stateWaiting {
+			m.ttft = time.Since(m.startTime)
+		}
 		return m, cmd
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -55,8 +60,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.renderedMarkdown == "" {
 				m.renderedMarkdown = m.accumulatedText
 			}
-
-			return m, tea.Quit
 		}
 	}
 	return m, nil
