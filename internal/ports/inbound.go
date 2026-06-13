@@ -44,3 +44,7 @@ type ToolServicePort interface {
 	GetToolByName(toolName string) (*models.Tool, error)
 	ExecuteToolCall(ctx context.Context, toolCall models.ToolCall) (*models.ToolResponse, error)
 }
+
+type ChatUiPort interface {
+	RunUI(ctx context.Context, session models.AgentSession) error
+}
