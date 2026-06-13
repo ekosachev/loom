@@ -29,6 +29,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
 	case models.StreamEvent:
 		switch msg.Type {
 		case models.EventText:
@@ -40,11 +42,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, waitForEvent(m.session.Events)
 		case models.EventLoopComplete:
 			m.state = stateDone
-			rendered, err := glamour.Render(m.accumulatedText, "dark")
-			if err != nil {
+			renderer, err := glamour.NewTermRenderer(
+				glamour.WithWordWrap(m.width),
+				glamour.WithStandardStyle("dark"),
+			)
+			if err == nil {
+				rendered, err := renderer.Render(m.accumulatedText)
+				if err == nil {
+					m.renderedMarkdown = rendered
+				}
+			}
+			if m.renderedMarkdown == "" {
 				m.renderedMarkdown = m.accumulatedText
-			} else {
-				m.renderedMarkdown = rendered
 			}
 
 			return m, tea.Quit

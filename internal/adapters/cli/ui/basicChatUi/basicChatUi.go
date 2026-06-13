@@ -22,6 +22,7 @@ type model struct {
 	accumulatedText  string
 	renderedMarkdown string
 	state            sessionState
+	width            int
 }
 
 func (m model) Init() tea.Cmd {
