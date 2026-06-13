@@ -9,21 +9,20 @@ import (
 )
 
 func (m model) View() tea.View {
+	header := m.renderHeader()
+	footer := m.renderFooter()
+	var body string
+
 	switch m.state {
-	case stateWaiting:
-		header := m.renderHeader()
-		return tea.NewView(header)
 	case stateStreaming:
-		header := m.renderHeader()
-		footer := m.renderFooter()
-		return tea.NewView(fmt.Sprintf("\n%s\n%s\n%s\n", header, m.accumulatedText, footer))
+		body = m.accumulatedText
 	case stateDone:
-		header := m.renderHeader()
-		footer := m.renderFooter()
-		return tea.NewView(fmt.Sprintf("\n%s\n%s\n%s\n", header, m.renderedMarkdown, footer))
+		body = m.renderedMarkdown
 	default:
-		return tea.NewView("")
+		body = ""
 	}
+
+	return tea.NewView(fmt.Sprintf("\n%s\n%s\n%s\n", header, body, footer))
 }
 
 func (m model) renderHeader() string {
@@ -54,5 +53,8 @@ func (m model) renderHeader() string {
 }
 
 func (m model) renderFooter() string {
-	return "  " + strings.Repeat("─", max(m.width-4, 0)) + "  "
+	branch := fmt.Sprintf("%s/%s", m.session.Workspace, m.session.Branch)
+	lineLength := m.width - 5 - len([]rune(branch))
+
+	return fmt.Sprintf("  %s %s  ", branch, strings.Repeat("─", max(lineLength, 0)))
 }

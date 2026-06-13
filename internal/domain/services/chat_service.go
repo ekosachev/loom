@@ -192,5 +192,7 @@ func (cs *ChatService) ExecuteChat(
 	return &models.AgentSession{
 		Events:    resutltCh,
 		Approvals: approveCh,
+		Workspace: currentWorkspace.Name,
+		Branch:    currentBranch.Name,
 	}, nil
 }

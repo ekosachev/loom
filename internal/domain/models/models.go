@@ -163,4 +163,6 @@ type ApprovalResponse struct {
 type AgentSession struct {
 	Events    <-chan StreamEvent
 	Approvals chan<- ApprovalResponse
+	Workspace string
+	Branch    string
 }
