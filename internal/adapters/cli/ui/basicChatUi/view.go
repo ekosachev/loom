@@ -53,8 +53,15 @@ func (m model) renderHeader() string {
 }
 
 func (m model) renderFooter() string {
+	model := m.session.Model.Name
 	branch := fmt.Sprintf("%s/%s", m.session.Workspace, m.session.Branch)
-	lineLength := m.width - 5 - len([]rune(branch))
 
-	return fmt.Sprintf("  %s %s  ", branch, strings.Repeat("─", max(lineLength, 0)))
+	usage := "? => ? tk @ $?"
+	if usageInfo := m.usageInfo; usageInfo != nil {
+		usage = fmt.Sprintf("%d => %d tk @ $%.3f", usageInfo.PromptTokens, usageInfo.CompletionTokens, usageInfo.Cost)
+	}
+
+	lineLength := m.width - 9 - len([]rune(branch)) - len([]rune(model)) - len([]rune(usage))
+
+	return fmt.Sprintf("  %s @ %s %s %s  ", model, branch, strings.Repeat("─", max(lineLength, 0)), usage)
 }

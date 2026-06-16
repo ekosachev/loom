@@ -194,5 +194,6 @@ func (cs *ChatService) ExecuteChat(
 		Approvals: approveCh,
 		Workspace: currentWorkspace.Name,
 		Branch:    currentBranch.Name,
+		Model:     *model,
 	}, nil
 }

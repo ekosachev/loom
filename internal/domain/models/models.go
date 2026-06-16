@@ -31,6 +31,12 @@ type Model struct {
 	SupportsTools bool   `yaml:"supports_tools"`
 }
 
+type UsageInfo struct {
+	PromptTokens     int
+	CompletionTokens int
+	Cost             float64
+}
+
 type CompletionRequest struct {
 	ThreadHistory []Message
 	Model         Model
@@ -42,6 +48,7 @@ type StreamEvent struct {
 
 	Text     string
 	ToolCall *ToolCall
+	Usage    *UsageInfo
 	Err      error
 }
 
@@ -51,6 +58,7 @@ const (
 	EventText StreamEventType = iota
 	EventToolCall
 	EventToolCallRequest
+	EventUsageInfo
 	EventError
 	EventDone
 	EventLoopComplete
@@ -165,4 +173,5 @@ type AgentSession struct {
 	Approvals chan<- ApprovalResponse
 	Workspace string
 	Branch    string
+	Model     Model
 }

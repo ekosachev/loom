@@ -105,6 +105,11 @@ func (a *OpenRouterAdapter) StreamCompletion(
 						ToolCalls []toolCallDTO `json:"tool_calls"`
 					} `json:"delta"`
 				} `json:"choices"`
+				Usage *struct {
+					CompletionTokens int     `json:"completion_tokens"`
+					PromptTokens     int     `json:"prompt_tokens"`
+					Cost             float64 `json:"cost"`
+				} `json:"usage"`
 			}
 
 			if err := json.Unmarshal([]byte(dataStr), &chunk); err != nil {
@@ -113,6 +118,17 @@ func (a *OpenRouterAdapter) StreamCompletion(
 					Err:  err,
 				}
 				return
+			}
+
+			if usage := chunk.Usage; usage != nil {
+				eventCh <- models.StreamEvent{
+					Type: models.EventUsageInfo,
+					Usage: &models.UsageInfo{
+						PromptTokens:     usage.PromptTokens,
+						CompletionTokens: usage.CompletionTokens,
+						Cost:             usage.Cost,
+					},
+				}
 			}
 
 			if len(chunk.Choices) > 0 {

@@ -1,6 +1,7 @@
 package basicchatui
 
 import (
+	"fmt"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -60,6 +61,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.renderedMarkdown == "" {
 				m.renderedMarkdown = m.accumulatedText
 			}
+		case models.EventUsageInfo:
+			m.usageInfo = msg.Usage
+		case models.EventError:
+			panic(fmt.Errorf("Error: %w", msg.Err))
 		}
 	}
 	return m, nil

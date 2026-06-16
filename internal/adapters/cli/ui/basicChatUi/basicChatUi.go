@@ -26,6 +26,7 @@ type model struct {
 	width            int
 	startTime        time.Time
 	ttft             time.Duration
+	usageInfo        *models.UsageInfo
 }
 
 func (m model) Init() tea.Cmd {
