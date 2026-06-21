@@ -1,6 +1,7 @@
 package basicchatui
 
 import (
+	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/spinner"
@@ -75,19 +76,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) renderMarkdown() model {
+	text := strings.Trim(m.accumulatedText, "\n\t\r ")
+	if text == "" {
+		m.renderedMarkdown = ""
+		return m
+	}
+
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithWordWrap(m.width),
 		glamour.WithStandardStyle("dark"),
 	)
 	if err == nil {
-		rendered, err := renderer.Render(m.accumulatedText)
+		rendered, err := renderer.Render(text)
 		if err == nil {
 			m.renderedMarkdown = rendered
 			return m
 		}
 	}
 
-	m.renderedMarkdown = m.accumulatedText
+	m.renderedMarkdown = text
 	return m
 }
 
