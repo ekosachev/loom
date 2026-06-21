@@ -14,19 +14,25 @@ type sessionState int
 const (
 	stateWaiting sessionState = iota
 	stateStreaming
+	stateToolCallConfirmation
 	stateDone
 )
 
 type model struct {
-	spinner          spinner.Model
-	session          models.AgentSession
+	state           sessionState
+	session         models.AgentSession
+	ttft            time.Duration
+	startTime       time.Time
+	usageInfo       *models.UsageInfo
+	toolCallRequest *models.ToolCall
+
 	accumulatedText  string
 	renderedMarkdown string
-	state            sessionState
-	width            int
-	startTime        time.Time
-	ttft             time.Duration
-	usageInfo        *models.UsageInfo
+	messageBlocks    []string
+	currentEvent     *models.StreamEvent
+
+	spinner spinner.Model
+	width   int
 }
 
 func (m model) Init() tea.Cmd {

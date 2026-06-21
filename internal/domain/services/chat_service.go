@@ -117,8 +117,6 @@ func (cs *ChatService) ExecuteChat(
 				switch event.Type {
 				case models.EventToolCall:
 					toolCalls = append(toolCalls, *event.ToolCall)
-				case models.EventDone:
-					return
 				case models.EventText:
 					messageContent.Write([]byte(event.Text))
 				}

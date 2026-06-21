@@ -29,19 +29,9 @@ func (a *OpenRouterAdapter) StreamCompletion(
 ) (<-chan models.StreamEvent, error) {
 	eventCh := make(chan models.StreamEvent)
 
-	reqMessages := make([]openRouterMessage, len(request.ThreadHistory))
+	reqMessages := makeThreadHistory(request)
 
-	for i, m := range request.ThreadHistory {
-		reqMessages[i] = openRouterMessage{Role: m.Role, Content: m.Content}
-		if m.ToolCallID != nil {
-			reqMessages[i].ToolCallID = *m.ToolCallID
-		}
-	}
-
-	toolsPreprocessed := make([]requestToolDTO, len(request.Tools))
-	for i, t := range request.Tools {
-		toolsPreprocessed[i] = preprocessTool(t)
-	}
+	toolsPreprocessed := makeToolsList(request)
 
 	modelID := fmt.Sprintf("%s/%s", request.Model.Provider, request.Model.Slug)
 	payload := openRouterRequestDTO{
@@ -62,10 +52,7 @@ func (a *OpenRouterAdapter) StreamCompletion(
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.key))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("HTTP-Referer", "https://github.com/ekosachev/loom")
-	req.Header.Set("X-Title", "Loom")
+	a.fillHeaders(req)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
@@ -77,10 +64,7 @@ func (a *OpenRouterAdapter) StreamCompletion(
 		defer close(eventCh)
 
 		if resp.StatusCode != http.StatusOK {
-			eventCh <- models.StreamEvent{
-				Type: models.EventError,
-				Err:  err,
-			}
+			produceError(eventCh, err)
 			return
 		}
 
@@ -113,35 +97,19 @@ func (a *OpenRouterAdapter) StreamCompletion(
 			}
 
 			if err := json.Unmarshal([]byte(dataStr), &chunk); err != nil {
-				eventCh <- models.StreamEvent{
-					Type: models.EventError,
-					Err:  err,
-				}
+				produceError(eventCh, err)
 				return
 			}
 
 			if usage := chunk.Usage; usage != nil {
-				eventCh <- models.StreamEvent{
-					Type: models.EventUsageInfo,
-					Usage: &models.UsageInfo{
-						PromptTokens:     usage.PromptTokens,
-						CompletionTokens: usage.CompletionTokens,
-						Cost:             usage.Cost,
-					},
-				}
+				reportUsage(eventCh, usage)
 			}
 
 			if len(chunk.Choices) > 0 {
 				content := chunk.Choices[0].Delta.Content
 				chunkToolCalls := chunk.Choices[0].Delta.ToolCalls
 
-				for _, call := range chunkToolCalls {
-					if _, ok := toolCalls[call.Index]; !ok {
-						toolCalls[call.Index] = &call
-					} else {
-						toolCalls[call.Index].combineChunks(call)
-					}
-				}
+				extractToolCalls(chunkToolCalls, toolCalls)
 
 				if content != "" {
 					select {
@@ -150,11 +118,18 @@ func (a *OpenRouterAdapter) StreamCompletion(
 						Text: content,
 					}:
 					case <-ctx.Done():
-						eventCh <- models.StreamEvent{Type: models.EventDone}
 						break
 					}
 				}
 			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			produceError(eventCh, err)
+		}
+
+		eventCh <- models.StreamEvent{
+			Type: models.EventDone,
 		}
 
 		for _, call := range toolCalls {
@@ -170,6 +145,68 @@ func (a *OpenRouterAdapter) StreamCompletion(
 	}()
 
 	return eventCh, nil
+}
+
+func extractToolCalls(chunkToolCalls []toolCallDTO, toolCalls map[int]*toolCallDTO) {
+	for _, call := range chunkToolCalls {
+		if _, ok := toolCalls[call.Index]; !ok {
+			toolCalls[call.Index] = &call
+		} else {
+			toolCalls[call.Index].combineChunks(call)
+		}
+	}
+}
+
+func reportUsage(eventCh chan models.StreamEvent, usage *struct {
+	CompletionTokens int     `json:"completion_tokens"`
+	PromptTokens     int     `json:"prompt_tokens"`
+	Cost             float64 `json:"cost"`
+},
+) {
+	eventCh <- models.StreamEvent{
+		Type: models.EventUsageInfo,
+		Usage: &models.UsageInfo{
+			PromptTokens:     usage.PromptTokens,
+			CompletionTokens: usage.CompletionTokens,
+			Cost:             usage.Cost,
+		},
+	}
+}
+
+func produceError(eventCh chan models.StreamEvent, err error) {
+	if err != nil {
+		eventCh <- models.StreamEvent{
+			Type: models.EventError,
+			Err:  err,
+		}
+	}
+}
+
+func (a *OpenRouterAdapter) fillHeaders(req *http.Request) {
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.key))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("HTTP-Referer", "https://github.com/ekosachev/loom")
+	req.Header.Set("X-Title", "Loom")
+}
+
+func makeToolsList(request models.CompletionRequest) []requestToolDTO {
+	toolsPreprocessed := make([]requestToolDTO, len(request.Tools))
+	for i, t := range request.Tools {
+		toolsPreprocessed[i] = preprocessTool(t)
+	}
+	return toolsPreprocessed
+}
+
+func makeThreadHistory(request models.CompletionRequest) []openRouterMessage {
+	reqMessages := make([]openRouterMessage, len(request.ThreadHistory))
+
+	for i, m := range request.ThreadHistory {
+		reqMessages[i] = openRouterMessage{Role: m.Role, Content: m.Content}
+		if m.ToolCallID != nil {
+			reqMessages[i].ToolCallID = *m.ToolCallID
+		}
+	}
+	return reqMessages
 }
 
 func (a *OpenRouterAdapter) GetMetaForModel(ctx context.Context, cfg models.Config, provider string, slug string) (*models.Model, error) {
