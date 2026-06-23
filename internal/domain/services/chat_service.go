@@ -78,7 +78,7 @@ func (cs *ChatService) ExecuteChat(
 	}
 
 	resutltCh := make(chan models.StreamEvent)
-	approveCh := make(chan models.ApprovalResponse)
+	approveCh := make(chan models.InteractionApproval)
 	toolCalls := []models.ToolCall{}
 	headID := userMsg.ID
 
@@ -134,9 +134,15 @@ func (cs *ChatService) ExecuteChat(
 			headID = modelMessage.ID
 
 			for _, toolCall := range toolCalls {
+				tool, err := cs.toolService.GetToolByName(toolCall.Name)
 				resutltCh <- models.StreamEvent{
-					Type:     models.EventToolCallRequest,
-					ToolCall: &toolCall,
+					Type: models.EventInteractionRequired,
+					Interaction: &models.Interaction{
+						ToolCall: toolCall,
+						Title:    tool.Interaction.Title,
+						Kind:     tool.Interaction.Kind,
+						Form:     models.JSONSchemaForm{Fields: tool.Interaction.Form},
+					},
 				}
 
 				approval, ok := <-approveCh
@@ -147,7 +153,7 @@ func (cs *ChatService) ExecuteChat(
 
 				var toolResult *models.ToolResponse
 				if approval.Approved {
-					toolResult, err = cs.toolService.ExecuteToolCall(ctx, toolCall)
+					toolResult, err = cs.toolService.ExecuteToolCall(ctx, approval.ToolCall)
 					if err != nil {
 						resutltCh <- emitErr(err)
 						return

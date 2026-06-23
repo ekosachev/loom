@@ -133,12 +133,20 @@ func (a *OpenRouterAdapter) StreamCompletion(
 		}
 
 		for _, call := range toolCalls {
+
+			var args map[string]any
+			err = json.Unmarshal([]byte(call.Function.Arguments), &args)
+			if err != nil {
+				produceError(eventCh, err)
+				continue
+			}
+
 			eventCh <- models.StreamEvent{
 				Type: models.EventToolCall,
 				ToolCall: &models.ToolCall{
 					Name:      call.Function.Name,
 					ID:        call.ID,
-					Arguments: call.Function.Arguments,
+					Arguments: args,
 				},
 			}
 		}

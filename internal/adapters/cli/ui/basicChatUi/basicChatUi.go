@@ -14,17 +14,17 @@ type sessionState int
 const (
 	stateWaiting sessionState = iota
 	stateStreaming
-	stateToolCallConfirmation
+	stateInteraction
 	stateDone
 )
 
 type model struct {
-	state           sessionState
-	session         models.AgentSession
-	ttft            time.Duration
-	startTime       time.Time
-	usageInfo       *models.UsageInfo
-	toolCallRequest *models.ToolCall
+	state       sessionState
+	session     models.AgentSession
+	ttft        time.Duration
+	startTime   time.Time
+	usageInfo   *models.UsageInfo
+	interaction *models.Interaction
 
 	accumulatedText  string
 	renderedMarkdown string

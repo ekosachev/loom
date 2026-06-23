@@ -5,7 +5,7 @@ type StreamEventType int
 const (
 	EventText StreamEventType = iota
 	EventToolCall
-	EventToolCallRequest
+	EventInteractionRequired
 	EventUsageInfo
 	EventError
 	EventDone
@@ -27,15 +27,16 @@ type CompletionRequest struct {
 type StreamEvent struct {
 	Type StreamEventType
 
-	Text     string
-	ToolCall *ToolCall
-	Usage    *UsageInfo
-	Err      error
+	Text        string
+	ToolCall    *ToolCall
+	Interaction *Interaction
+	Usage       *UsageInfo
+	Err         error
 }
 
 type AgentSession struct {
 	Events    <-chan StreamEvent
-	Approvals chan<- ApprovalResponse
+	Approvals chan<- InteractionApproval
 	Workspace string
 	Branch    string
 	Model     Model

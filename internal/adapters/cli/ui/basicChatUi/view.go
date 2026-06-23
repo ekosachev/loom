@@ -19,8 +19,8 @@ func (m model) View() tea.View {
 		body = m.accumulatedText
 	case stateDone:
 		body = m.renderedMarkdown
-	case stateToolCallConfirmation:
-		body = m.renderToolRequest()
+	case stateInteraction:
+		body = m.renderInteraction()
 	default:
 		body = ""
 	}
@@ -43,8 +43,8 @@ func (m model) renderHeader() string {
 		spinnerLabel = "Capturing response stream..."
 	case stateDone:
 		spinnerLabel = "Streaming complete"
-	case stateToolCallConfirmation:
-		spinnerLabel = "Waiting for tool call confirmation"
+	case stateInteraction:
+		spinnerLabel = "Waiting for interaction..."
 	}
 
 	var spinnerText string
@@ -78,8 +78,4 @@ func (m model) renderFooter() string {
 
 func (m model) renderMessageChunks() string {
 	return strings.Join(m.messageBlocks, "\n")
-}
-
-func (m model) renderToolRequest() string {
-	return fmt.Sprintf("Model has called %s tool. Do you approve? [y/n]\nCall id: %s", m.toolCallRequest.Name, m.toolCallRequest.ID)
 }

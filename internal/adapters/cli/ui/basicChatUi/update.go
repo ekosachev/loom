@@ -27,12 +27,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "Ctrl+c":
 			return m, tea.Quit
 		case "y", "Y":
-			if m.state == stateToolCallConfirmation {
+			if m.state == stateInteraction {
 				m.emitToolApproval(true)
 				m.state = stateWaiting
 			}
 		case "n", "N":
-			if m.state == stateToolCallConfirmation {
+			if m.state == stateInteraction {
 				m.emitToolApproval(false)
 				m.state = stateWaiting
 			}
@@ -59,9 +59,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.usageInfo = msg.Usage
 		case models.EventError:
 			panic(msg.Err)
-		case models.EventToolCallRequest:
-			m.toolCallRequest = msg.ToolCall
-			m.state = stateToolCallConfirmation
+		case models.EventInteractionRequired:
+			m.interaction = msg.Interaction
+			m.state = stateInteraction
 			m = m.renderMarkdown()
 			m = m.pushChunk()
 		case models.EventDone:
@@ -108,12 +108,12 @@ func (m model) pushChunk() model {
 }
 
 func (m model) emitToolApproval(isApproved bool) model {
-	if m.toolCallRequest == nil {
+	if m.interaction == nil {
 		return m
 	}
-	m.session.Approvals <- models.ApprovalResponse{
+	m.session.Approvals <- models.InteractionApproval{
 		Approved: isApproved,
-		ID:       m.toolCallRequest.ID,
+		ToolCall: m.interaction.ToolCall,
 	}
 
 	return m

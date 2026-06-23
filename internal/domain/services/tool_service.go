@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/ekosachev/loom/internal/adapters/executors"
 	"github.com/ekosachev/loom/internal/domain/models"
@@ -37,13 +36,11 @@ func (s *ToolService) ExecuteToolCall(ctx context.Context, toolCall models.ToolC
 		return nil, err
 	}
 
-	arguments := map[string]any{}
+	arguments := toolCall.Arguments
 	for prop, propConfig := range tool.Tool.Parameters.Properties {
-		arguments[prop] = propConfig.Default
-	}
-
-	if err := json.Unmarshal([]byte(toolCall.Arguments), &arguments); err != nil {
-		return nil, err
+		if _, ok := arguments[prop]; !ok {
+			arguments[prop] = propConfig.Default
+		}
 	}
 
 	executionRequest := models.ToolExecutionRequest{

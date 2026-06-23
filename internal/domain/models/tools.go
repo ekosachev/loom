@@ -9,8 +9,10 @@ type (
 	StarlarkRequirement string
 	StarlarkParameters  string
 
-	InteractionBodyElementType string
-	InteractionActionType      string
+	InteractionKind string
+
+	FieldType  string
+	WidgetType string
 )
 
 const (
@@ -38,13 +40,11 @@ const (
 	StarlarkReturnGlobals StarlarkReturnType = "globals"
 )
 
-const (
-	InteractionBodyText InteractionBodyElementType = "text"
-)
+const InteractionApprove InteractionKind = "approve"
 
-const (
-	InteractionActionApprove InteractionActionType = "approve"
-)
+const FieldString FieldType = "string"
+
+const WidgetText WidgetType = "text"
 
 type Tool struct {
 	Meta struct {
@@ -63,7 +63,12 @@ type Tool struct {
 			Required []string `yaml:"required"`
 		} `yaml:"parameters"`
 	} `yaml:"tool"`
-	Runtime ToolRuntime `yaml:"runtime"`
+	Runtime     ToolRuntime `yaml:"runtime"`
+	Interaction struct {
+		Title string          `yaml:"title"`
+		Kind  InteractionKind `yaml:"kind"`
+		Form  []Field         `yaml:"form"`
+	} `yaml:"interaction"`
 }
 
 type ToolRuntime struct {
@@ -81,22 +86,32 @@ type StarlarkRuntimeConfig struct {
 	Requirements []StarlarkRequirement `yaml:"requirements"`
 }
 
-type ToolInteraction struct {
-	Idempotent bool                     `yaml:"idempotent"`
-	Title      string                   `yaml:"title"`
-	Body       []InteractionBodyElement `yaml:"body"`
-	Action     InteractionActionType    `yaml:"action"`
+type Interaction struct {
+	ToolCall ToolCall
+	Title    string
+	Kind     InteractionKind
+	Form     JSONSchemaForm
 }
 
-type InteractionBodyElement struct {
-	Type InteractionBodyElementType `yaml:"type"`
-	Text string                     `yaml:"text"`
+type InteractionApproval struct {
+	ToolCall ToolCall
+	Approved bool
+}
+
+type JSONSchemaForm struct {
+	Fields []Field
+}
+
+type Field struct {
+	Name   string     `yaml:"name"`
+	Type   FieldType  `yaml:"type"`
+	Widget WidgetType `yaml:"widget"`
 }
 
 type ToolCall struct {
 	Name      string
 	ID        string
-	Arguments string
+	Arguments map[string]any
 }
 
 type ToolExecutionRequest struct {
@@ -108,9 +123,4 @@ type ToolExecutionRequest struct {
 type ToolResponse struct {
 	ID      string
 	Content string
-}
-
-type ApprovalResponse struct {
-	ID       string
-	Approved bool
 }
