@@ -24,7 +24,8 @@ const (
 )
 
 const (
-	StarlarkRuntime RuntimeType = "starlark"
+	StarlarkRuntime    RuntimeType = "starlark"
+	InteractionRuntime RuntimeType = "interaction"
 )
 
 const (
@@ -40,11 +41,17 @@ const (
 	StarlarkReturnGlobals StarlarkReturnType = "globals"
 )
 
-const InteractionApprove InteractionKind = "approve"
+const (
+	InteractionApprove   InteractionKind = "approve"
+	InteractionInputText InteractionKind = "inputText"
+)
 
 const FieldString FieldType = "string"
 
-const WidgetText WidgetType = "text"
+const (
+	WidgetText      WidgetType = "text"
+	WidgetTextInput WidgetType = "textInput"
+)
 
 type Tool struct {
 	Meta struct {
@@ -72,8 +79,9 @@ type Tool struct {
 }
 
 type ToolRuntime struct {
-	Type           RuntimeType           `yaml:"type"`
-	StarlarkConfig StarlarkRuntimeConfig `yaml:"starlark"`
+	Type              RuntimeType              `yaml:"type"`
+	StarlarkConfig    StarlarkRuntimeConfig    `yaml:"starlark"`
+	InteractionConfig InteractionRuntimeConfig `yaml:"interaction"`
 }
 
 type StarlarkRuntimeConfig struct {
@@ -84,6 +92,10 @@ type StarlarkRuntimeConfig struct {
 		Name string             `yaml:"name"`
 	} `yaml:"return"`
 	Requirements []StarlarkRequirement `yaml:"requirements"`
+}
+
+type InteractionRuntimeConfig struct {
+	ResultField string `yaml:"result"`
 }
 
 type Interaction struct {
@@ -103,9 +115,11 @@ type JSONSchemaForm struct {
 }
 
 type Field struct {
-	Name   string     `yaml:"name"`
-	Type   FieldType  `yaml:"type"`
-	Widget WidgetType `yaml:"widget"`
+	Name        string     `yaml:"name"`
+	Type        FieldType  `yaml:"type"`
+	Widget      WidgetType `yaml:"widget"`
+	Interaction bool       `yaml:"interaction"`
+	Value       any        `yaml:"value"`
 }
 
 type ToolCall struct {

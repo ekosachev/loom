@@ -3,6 +3,7 @@ package basicchatui
 import (
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
@@ -23,19 +24,11 @@ func waitForEvent(ch <-chan models.StreamEvent) tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "Ctrl+c":
+		switch msg.Key().Keystroke() {
+		case "ctrl+c":
 			return m, tea.Quit
-		case "y", "Y":
-			if m.state == stateInteraction {
-				m.emitToolApproval(true)
-				m.state = stateWaiting
-			}
-		case "n", "N":
-			if m.state == stateInteraction {
-				m.emitToolApproval(false)
-				m.state = stateWaiting
-			}
+		default:
+			return m.handleKey(msg)
 		}
 
 	case spinner.TickMsg:
@@ -111,10 +104,66 @@ func (m model) emitToolApproval(isApproved bool) model {
 	if m.interaction == nil {
 		return m
 	}
+
+	for _, field := range m.interaction.Form.Fields {
+		if !field.Interaction {
+			continue
+		}
+
+		m.interaction.ToolCall.Arguments[field.Name] = field.Value
+	}
+
 	m.session.Approvals <- models.InteractionApproval{
 		Approved: isApproved,
 		ToolCall: m.interaction.ToolCall,
 	}
 
 	return m
+}
+
+func (m model) handleKey(msg tea.KeyMsg) (model, tea.Cmd) {
+	if m.state == stateInteraction && m.interaction != nil {
+		switch m.interaction.Kind {
+		case models.InteractionInputText:
+			for i, field := range m.interaction.Form.Fields {
+				if field.Widget == models.WidgetTextInput && field.Interaction {
+					if field.Value == nil {
+						field.Value = ""
+					}
+
+					switch msg.Key().Code {
+					case tea.KeyBackspace:
+						_, size := utf8.DecodeLastRuneInString(field.Value.(string))
+						if len(field.Value.(string))-size > 0 {
+							field.Value = field.Value.(string)[:len(field.Value.(string))-size]
+						}
+					case tea.KeyEnter:
+						m.emitToolApproval(true)
+						m.state = stateWaiting
+					default:
+						field.Value = field.Value.(string) + msg.Key().Text
+					}
+
+					m.interaction.Form.Fields[i] = field
+					break
+				}
+			}
+
+		case models.InteractionApprove:
+			switch msg.String() {
+			case "y", "Y":
+				if m.state == stateInteraction {
+					m.emitToolApproval(true)
+					m.state = stateWaiting
+				}
+			case "n", "N":
+				if m.state == stateInteraction {
+					m.emitToolApproval(false)
+					m.state = stateWaiting
+				}
+			}
+		}
+	}
+
+	return m, nil
 }

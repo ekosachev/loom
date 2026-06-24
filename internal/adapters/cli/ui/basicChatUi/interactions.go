@@ -14,6 +14,7 @@ var (
 
 	approveTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("47"))
 	denyTextStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	hintTextStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("236")).Italic(true)
 
 	newline = []byte("\n")
 )
@@ -44,6 +45,13 @@ func (m *model) renderInteraction() string {
 	switch i.Kind {
 	case models.InteractionApprove:
 		output.Write([]byte(renderApprovalInput()))
+	case models.InteractionInputText:
+		for _, field := range i.Form.Fields {
+			if field.Interaction {
+				output.Write([]byte(renderTextInput(field.Value)))
+				break
+			}
+		}
 	}
 
 	output.Write(newline)
@@ -58,4 +66,18 @@ func renderTextWidget(field models.Field, value any) string {
 
 func renderApprovalInput() string {
 	return "Approve? " + approveTextStyle.Inline(true).Render("Yes [y]") + " / " + denyTextStyle.Inline(true).Render("No [n]")
+}
+
+func renderTextInput(value any) string {
+	var displayValue string
+	if stringValue, ok := value.(string); ok {
+		displayValue = stringValue
+	} else {
+		displayValue = hintTextStyle.Inline(true).Render("Input text here....")
+	}
+
+	if displayValue == "" {
+	}
+
+	return "> " + displayValue
 }

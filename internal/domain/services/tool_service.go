@@ -17,7 +17,8 @@ func NewToolService(toolStorage ports.ToolStoragePort) *ToolService {
 	return &ToolService{
 		toolStorage: toolStorage,
 		executors: map[models.RuntimeType]ports.ToolExecutor{
-			models.StarlarkRuntime: executors.NewStarlarkExecutor(),
+			models.StarlarkRuntime:    executors.NewStarlarkExecutor(),
+			models.InteractionRuntime: executors.NewInteractionExecutor(),
 		},
 	}
 }
