@@ -11,11 +11,12 @@ type openRouterMessage struct {
 }
 
 type openRouterRequestDTO struct {
-	Model      string              `json:"model"`
-	Messages   []openRouterMessage `json:"messages"`
-	Stream     bool                `json:"stream"`
-	ToolChoice string              `json:"tool_choice"`
-	Tools      []requestToolDTO    `json:"tools"`
+	Model             string              `json:"model"`
+	Messages          []openRouterMessage `json:"messages"`
+	Stream            bool                `json:"stream"`
+	ToolChoice        string              `json:"tool_choice"`
+	Tools             []requestToolDTO    `json:"tools"`
+	ParallelToolCalls bool                `json:"parallel_tool_calls"`
 }
 
 type requestToolDTO struct {

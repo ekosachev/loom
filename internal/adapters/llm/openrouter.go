@@ -40,6 +40,7 @@ func (a *OpenRouterAdapter) StreamCompletion(
 		Stream:     true,
 		ToolChoice: "auto",
 		Tools:      toolsPreprocessed,
+		ParallelToolCalls: true,
 	}
 
 	jsonData, err := json.Marshal(payload)
