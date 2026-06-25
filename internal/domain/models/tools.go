@@ -9,6 +9,9 @@ type (
 	StarlarkRequirement string
 	StarlarkParameters  string
 
+	ShellScriptLocation   string
+	ShellScriptParameters string
+
 	InteractionKind string
 
 	FieldType  string
@@ -26,6 +29,7 @@ const (
 const (
 	StarlarkRuntime    RuntimeType = "starlark"
 	InteractionRuntime RuntimeType = "interaction"
+	ShellRuntime       RuntimeType = "shell"
 )
 
 const (
@@ -44,6 +48,14 @@ const (
 const (
 	InteractionApprove   InteractionKind = "approve"
 	InteractionInputText InteractionKind = "inputText"
+)
+
+const (
+	ShellScriptInProp ShellScriptLocation = "prop"
+)
+
+const (
+	ShellParametersAsTemplate ShellScriptParameters = "template"
 )
 
 const FieldString FieldType = "string"
@@ -82,6 +94,7 @@ type ToolRuntime struct {
 	Type              RuntimeType              `yaml:"type"`
 	StarlarkConfig    StarlarkRuntimeConfig    `yaml:"starlark"`
 	InteractionConfig InteractionRuntimeConfig `yaml:"interaction"`
+	ShellConfig       ShellRuntimeConfig       `yaml:"shell"`
 }
 
 type StarlarkRuntimeConfig struct {
@@ -96,6 +109,14 @@ type StarlarkRuntimeConfig struct {
 
 type InteractionRuntimeConfig struct {
 	ResultField string `yaml:"result"`
+}
+
+type ShellRuntimeConfig struct {
+	Location   ShellScriptLocation   `yaml:"location"`
+	Parameters ShellScriptParameters `yaml:"parameters"`
+	Cmd        string                `yaml:"cmd"`
+	Flags      string                `yaml:"flags"`
+	Script     string                `yaml:"script"`
 }
 
 type Interaction struct {
