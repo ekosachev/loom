@@ -39,11 +39,6 @@ func (s *ToolService) ExecuteToolCall(ctx context.Context, toolCall models.ToolC
 	}
 
 	arguments := toolCall.Arguments
-	for prop, propConfig := range tool.Tool.Parameters.Properties {
-		if _, ok := arguments[prop]; !ok {
-			arguments[prop] = propConfig.Default
-		}
-	}
 
 	executionRequest := models.ToolExecutionRequest{
 		ToolRoot:  s.toolStorage.GetToolsRoot() + "\\" + toolCall.Name,
@@ -59,4 +54,14 @@ func (s *ToolService) ExecuteToolCall(ctx context.Context, toolCall models.ToolC
 	}
 	toolResult.ID = toolCall.ID
 	return toolResult, nil
+}
+
+func (s *ToolService) FillArgs(toolCall models.ToolCall, tool *models.Tool) map[string]any {
+	arguments := toolCall.Arguments
+	for prop, propConfig := range tool.Tool.Parameters.Properties {
+		if _, ok := arguments[prop]; !ok {
+			arguments[prop] = propConfig.Default
+		}
+	}
+	return arguments
 }

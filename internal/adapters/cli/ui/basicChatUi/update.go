@@ -55,11 +55,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case models.EventInteractionRequired:
 			m.interaction = msg.Interaction
 			m.state = stateInteraction
-			m = m.renderMarkdown()
-			m = m.pushChunk()
+			m.renderMarkdown()
+			m.pushChunk()
 		case models.EventDone:
-			m = m.renderMarkdown()
-			m = m.pushChunk()
+			m.renderMarkdown()
+			m.pushChunk()
 		case models.EventLoopComplete:
 			m.state = stateDone
 		}
@@ -68,11 +68,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) renderMarkdown() model {
+func (m *model) renderMarkdown() {
 	text := strings.Trim(m.accumulatedText, "\n\t\r ")
 	if text == "" {
 		m.renderedMarkdown = ""
-		return m
 	}
 
 	renderer, err := glamour.NewTermRenderer(
@@ -83,26 +82,23 @@ func (m model) renderMarkdown() model {
 		rendered, err := renderer.Render(text)
 		if err == nil {
 			m.renderedMarkdown = rendered
-			return m
 		}
 	}
 
 	m.renderedMarkdown = text
-	return m
 }
 
-func (m model) pushChunk() model {
+func (m *model) pushChunk() {
 	if len(m.renderedMarkdown) > 0 {
 		m.messageBlocks = append(m.messageBlocks, m.renderedMarkdown)
 		m.renderedMarkdown = ""
 		m.accumulatedText = ""
 	}
-	return m
 }
 
-func (m model) emitToolApproval(isApproved bool) model {
+func (m *model) emitToolApproval(isApproved bool) {
 	if m.interaction == nil {
-		return m
+		return
 	}
 
 	for _, field := range m.interaction.Form.Fields {
@@ -118,10 +114,12 @@ func (m model) emitToolApproval(isApproved bool) model {
 		ToolCall: m.interaction.ToolCall,
 	}
 
-	return m
+	m.accumulatedText = m.renderPostInteractionInfo()
+	m.renderMarkdown()
+	m.pushChunk()
 }
 
-func (m model) handleKey(msg tea.KeyMsg) (model, tea.Cmd) {
+func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.state == stateInteraction && m.interaction != nil {
 		switch m.interaction.Kind {
 		case models.InteractionInputText:

@@ -43,6 +43,7 @@ type ToolServicePort interface {
 	ListTools() ([]models.Tool, error)
 	GetToolByName(toolName string) (*models.Tool, error)
 	ExecuteToolCall(ctx context.Context, toolCall models.ToolCall) (*models.ToolResponse, error)
+	FillArgs(toolCall models.ToolCall, tool *models.Tool) map[string]any
 }
 
 type ChatUiPort interface {

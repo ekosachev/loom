@@ -3,6 +3,7 @@ package basicchatui
 import (
 	"fmt"
 	"strings"
+	"text/template"
 
 	"charm.land/lipgloss/v2"
 	"github.com/ekosachev/loom/internal/domain/models"
@@ -80,4 +81,23 @@ func renderTextInput(value any) string {
 	}
 
 	return "> " + displayValue
+}
+
+func (m *model) renderPostInteractionInfo() string {
+	if m.interaction == nil {
+		return "No interaction"
+	}
+
+	tmpl, err := template.New("info").Parse(m.interaction.Info)
+	if err != nil {
+		return "Failed to parse info template"
+	}
+
+	var result strings.Builder
+	err = tmpl.Execute(&result, m.interaction.ToolCall.Arguments)
+	if err != nil {
+		return "Failed to execute info template"
+	}
+
+	return result.String()
 }

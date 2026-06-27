@@ -87,6 +87,7 @@ type Tool struct {
 		Title string          `yaml:"title"`
 		Kind  InteractionKind `yaml:"kind"`
 		Form  []Field         `yaml:"form"`
+		Info  string          `yaml:"info"`
 	} `yaml:"interaction"`
 }
 
@@ -124,6 +125,7 @@ type Interaction struct {
 	Title    string
 	Kind     InteractionKind
 	Form     JSONSchemaForm
+	Info     string
 }
 
 type InteractionApproval struct {

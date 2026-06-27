@@ -135,6 +135,9 @@ func (cs *ChatService) ExecuteChat(
 
 			for _, toolCall := range toolCalls {
 				tool, err := cs.toolService.GetToolByName(toolCall.Name)
+
+				toolCall.Arguments = cs.toolService.FillArgs(toolCall, tool)
+
 				resutltCh <- models.StreamEvent{
 					Type: models.EventInteractionRequired,
 					Interaction: &models.Interaction{
@@ -142,6 +145,7 @@ func (cs *ChatService) ExecuteChat(
 						Title:    tool.Interaction.Title,
 						Kind:     tool.Interaction.Kind,
 						Form:     models.JSONSchemaForm{Fields: tool.Interaction.Form},
+						Info:     tool.Interaction.Info,
 					},
 				}
 
